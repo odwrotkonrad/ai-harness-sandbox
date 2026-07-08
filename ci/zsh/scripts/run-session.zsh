@@ -18,7 +18,14 @@ if ! $kc get pod $SESSION >/dev/null 2>&1; then
 fi
 
 $kc wait --for=condition=Ready pod/$SESSION --timeout=300s
-#[why] runtime secret pass, mirrors the macos vm SendEnv flow: host token rides the exec into ko's login shell (su -w whitelists it), never baked or stored
+
+#[why] resolved from 1password at session start when not already in the host env
+typeset gitlab_token=${GITLAB_TOKEN-}
+if { [[ -z $gitlab_token ]] && (( $+commands[op] )) } {
+  gitlab_token=$(op read 'op://ProgrammaticAccess/gitlab/access_token' 2>/dev/null) || gitlab_token=''
+}
+
+#[why] runtime secret pass, mirrors the macos vm SendEnv flow: host tokens ride the exec into ko's login shell (su -w whitelists them), never baked or stored
 #[why] container runs as root (overlay mount); su drops into ko's login zsh
-exec $kc exec -it $SESSION -- env "OP_SERVICE_ACCOUNT_TOKEN=${OP_SERVICE_ACCOUNT_TOKEN-}" su -w OP_SERVICE_ACCOUNT_TOKEN - ko
+exec $kc exec -it $SESSION -- env "OP_SERVICE_ACCOUNT_TOKEN=${OP_SERVICE_ACCOUNT_TOKEN-}" "GITLAB_TOKEN=$gitlab_token" su -w OP_SERVICE_ACCOUNT_TOKEN,GITLAB_TOKEN - ko
 ##[<] 🤖🤖🤖
