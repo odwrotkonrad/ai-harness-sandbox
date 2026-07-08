@@ -24,7 +24,7 @@ export SESSION
 ##[>] Docs [genai-include]
 #[what] render *.ontoRepo.tpl onto the repo (.env, makefile.agents.md, repo-structure.md, CLAUDE.md, AGENTS.md, README.md)
 render-templates:
-	@che render-templates --profile=ontoRepo
+	@che render-templates
 ##[<] Docs
 
 ##[>] Sandbox [genai-include]
