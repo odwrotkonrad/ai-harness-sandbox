@@ -7,8 +7,10 @@ Local claude session sandbox: kind cluster plus per-session pods running a confi
 
 ## What It Is
 
-Local claude session sandbox: a single-node kind cluster (`sandbox`) running
-persistent per-session pods from a locally built `sandbox:local` image. Owns
+Local claude session sandbox: a two-node kind cluster (`sandbox`, one
+control-plane node for the management plane, one worker node for the data
+plane) running persistent per-session pods on the worker from a locally built
+`sandbox:local` image. Owns
 the published `dev-sandbox` toolchain base (debian bookworm, multi-arch
 arm64 + amd64: go, che, render-tpl, lefthook, yq, zsh), built by CI to this
 project's container registry. The final image builds FROM that base locally,
@@ -51,6 +53,7 @@ Each convention dir carries a runnable `example/`. This repo itself follows all 
 ### Environment Variables:
 
 `CONFIGS_DIR=path` local configs checkout baked into the image (docker build context), unset -> sibling ../configs
+`CONFIGS_BAKE_DIR=path` in-image path the configs checkout bakes to, unset -> /home/ko/projects/gitlab/<configs parent dir>/configs
 `SESSION=name` session name (pod + pvc); required by stop/rm, unset on run-session -> s-<datetime>
 
 ### Docs:

@@ -2,6 +2,8 @@
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: sandbox
+#[why] control-plane keeps its NoSchedule taint in multi-node clusters: mgmt plane stays clean, session pods land on the worker
 nodes:
   - role: control-plane
+  - role: worker
 ##[<] 🤖🤖

@@ -4,6 +4,7 @@
 ### Environment Variables:
 
 `CONFIGS_DIR=path` local configs checkout baked into the image (docker build context), unset -> sibling ../configs
+`CONFIGS_BAKE_DIR=path` in-image path the configs checkout bakes to, unset -> /home/ko/projects/gitlab/<configs parent dir>/configs
 `SESSION=name` session name (pod + pvc); required by stop/rm, unset on run-session -> s-<datetime>
 
 ### Docs:

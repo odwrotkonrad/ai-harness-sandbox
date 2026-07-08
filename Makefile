@@ -13,6 +13,9 @@ COMMANDS := render-templates run-repo-ci-prepare-hooks run-repo-ci-precommit-all
 #[what] local configs checkout baked into the image (docker build context), unset -> sibling ../configs
 #[vals] path
 export CONFIGS_DIR
+#[what] in-image path the configs checkout bakes to, unset -> /home/ko/projects/gitlab/<configs parent dir>/configs
+#[vals] path
+export CONFIGS_BAKE_DIR
 #[what] session name (pod + pvc); required by stop/rm, unset on run-session -> s-<datetime>
 #[vals] name
 export SESSION

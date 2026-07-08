@@ -1,6 +1,6 @@
 # sandbox
 
-Local claude session sandbox for the `konradodwrot` workspace.
+Local claude session sandbox.
 
 {{ renderMarkdown "assets/docs-agents/purpose.md" "normalize-headings" }}
 
@@ -8,7 +8,7 @@ Local claude session sandbox for the `konradodwrot` workspace.
 
 - `ci/dev-sandbox/Dockerfile` — published toolchain base `registry.gitlab.com/konradodwrot/sandbox/dev-sandbox` (multi-arch arm64 + amd64: go, che, render-tpl, lefthook, yq, zsh), built by CI, pins in `ci/tool-versions.env`.
 - `ci/Dockerfile` — final `sandbox:local` image: `FROM dev-sandbox`, bakes the local `configs` checkout via che `run-sync-full` (cli/linux profile, secrets skipped).
-- `ci/kind.yml` — single-node kind cluster config, cluster name `sandbox`.
+- `ci/kind.yml` — two-node kind cluster config (control-plane + worker), cluster name `sandbox`; session pods run on the worker.
 - `ci/zsh/scripts/` — zsh wrappers behind the Makefile targets.
 
 ## Use
