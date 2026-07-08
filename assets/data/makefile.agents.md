@@ -20,10 +20,10 @@
 `run-cluster-up` create the single-node kind cluster `sandbox` (no-op when up)
 `run-cluster-down` delete the kind cluster `sandbox` (sessions and PVCs go with it)
 `run-image-load` load sandbox:local into the kind cluster
-`run-session` create-or-reattach the SESSION pod (PVC-backed /home/ko) and exec a login zsh; exit leaves it running
-`run-session-stop` delete the SESSION pod, keep its PVC (home survives)
-`run-session-rm` delete the SESSION pod and its PVC
-`run-session-ls` list session pods and PVCs
+`run-session` create-or-reattach the SESSION pod (overlay home diff on the shared PVC) and exec a login zsh; exit leaves it running
+`run-session-stop` delete the SESSION pod, keep its home diff (session survives)
+`run-session-rm` delete the SESSION pod and its home diff
+`run-session-ls` list session pods and home diffs
 
 ### CI:
 

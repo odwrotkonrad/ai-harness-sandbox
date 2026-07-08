@@ -46,19 +46,19 @@ run-cluster-down:
 run-image-load:
 	@run-image-load.zsh
 
-#[what] create-or-reattach the SESSION pod (PVC-backed /home/ko) and exec a login zsh; exit leaves it running
+#[what] create-or-reattach the SESSION pod (overlay home diff on the shared PVC) and exec a login zsh; exit leaves it running
 run-session:
 	@run-session.zsh
 
-#[what] delete the SESSION pod, keep its PVC (home survives)
+#[what] delete the SESSION pod, keep its home diff (session survives)
 run-session-stop:
 	@run-session-stop.zsh
 
-#[what] delete the SESSION pod and its PVC
+#[what] delete the SESSION pod and its home diff
 run-session-rm:
 	@run-session-rm.zsh
 
-#[what] list session pods and PVCs
+#[what] list session pods and home diffs
 run-session-ls:
 	@run-session-ls.zsh
 ##[<] Sandbox

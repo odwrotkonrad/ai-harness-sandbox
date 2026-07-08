@@ -7,7 +7,7 @@ Local claude session sandbox.
 ## Layout
 
 - `ci/k8s/kind.yml` — two-node kind cluster config (control-plane + worker), cluster name `sandbox`; session pods run on the worker.
-- `ci/k8s/session.yml` — session pod + home PVC manifest, `${SESSION}` env-substituted at apply time.
+- `ci/k8s/session.yml` — session pod + shared home PVC manifest, `${SESSION}` env-substituted at apply time.
 - `ci/zsh/scripts/` — zsh wrappers behind the Makefile targets.
 
 The pod image is `registry.gitlab.com/konradodwrot/infra/oci-images/dev-sandbox`
@@ -29,10 +29,12 @@ $ make run-session-rm SESSION=s-mytopic
 $ make run-cluster-down
 ```
 
-A session is a named pod plus a PVC mounted at `/home/ko`, seeded from the
-image's baked home on first start. Exiting the shell leaves the pod running;
-`run-session` with the same `SESSION` reattaches. `run-session-stop` deletes
-the pod but keeps the PVC (home survives); `run-session-rm` deletes both.
+A session is a named pod whose `/home/ko` is an overlayfs: the image's baked
+home is the shared read-only base, the session's writable diff lives in its
+own subdir on the one shared `sandbox-home` PVC (no per-session copy of the
+base). Exiting the shell leaves the pod running; `run-session` with the same
+`SESSION` reattaches. `run-session-stop` deletes the pod but keeps the diff
+(session survives); `run-session-rm` deletes both.
 
 ## License
 

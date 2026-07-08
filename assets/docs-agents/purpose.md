@@ -7,10 +7,11 @@ control-plane node for the management plane, one worker node for the data
 plane) running persistent per-session pods on the worker. The pod image is the
 published config-baked `dev-sandbox` image from `infra/oci-images`
 (`registry.gitlab.com/konradodwrot/infra/oci-images/dev-sandbox`), pulled and
-retagged `sandbox:local`, then loaded into the cluster. Each session pod
-mounts a PVC at `/home/ko`, seeded from the image's baked home, so session
-state survives pod restart and shutdown. This repo owns only the runtime:
-kind/k8s config plus session utils and commands.
+retagged `sandbox:local`, then loaded into the cluster. Session home is an
+overlayfs: the image's baked `/home/ko` is the shared read-only base, one
+shared PVC keeps each session's writable diff, so session state survives pod
+restart and shutdown without copying the base per session. This repo owns only
+the runtime: kind/k8s config plus session utils and commands.
 
 ## Why It Exists
 
@@ -25,5 +26,6 @@ named, persistent, explicitly deleted session pods.
 - One command from image to shell: pull, cluster up, load, session exec.
 - No image building here: the published dev-sandbox image is the pod image.
 - Full personal config inside the pod: zsh, che, claude state, same as host cli/linux.
-- Persistent named sessions: home survives pod restart, deleted only explicitly.
+- Persistent named sessions: home diff survives pod restart, deleted only explicitly.
+- Space-efficient sessions: one shared home base (image layer), per-session overlay diffs on one PVC.
 - Offline-friendly: image loaded into the cluster, pods run `imagePullPolicy: Never`, no pull secrets.
