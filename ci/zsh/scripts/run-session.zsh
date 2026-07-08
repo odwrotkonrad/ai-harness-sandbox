@@ -18,5 +18,6 @@ if ! $kc get pod $SESSION >/dev/null 2>&1; then
 fi
 
 $kc wait --for=condition=Ready pod/$SESSION --timeout=300s
-exec $kc exec -it $SESSION -- zsh -l
+#[why] container runs as root (overlay mount); su drops into ko's login zsh
+exec $kc exec -it $SESSION -- su - ko
 ##[<] 🤖🤖🤖

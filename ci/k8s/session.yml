@@ -1,4 +1,4 @@
-##[>] 🤖🤖
+##[>] 🤖🤖🤖
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -15,20 +15,23 @@ metadata:
   labels: {app: claude-sandbox, session: "${SESSION}"}
 spec:
   restartPolicy: Always
-  initContainers:
-    - name: seed-home
-      image: sandbox:local
-      imagePullPolicy: Never
-      securityContext: {runAsUser: 0}
-      command: [sh, -c, 'if [ -z "$(ls -A /mnt/home)" ]; then cp -a /home/ko/. /mnt/home/; fi']
-      volumeMounts: [{name: home, mountPath: /mnt/home}]
   containers:
     - name: sandbox
       image: sandbox:local
       imagePullPolicy: Never
-      command: [sleep, infinity]
-      volumeMounts: [{name: home, mountPath: /home/ko}]
+      #[why] home as overlay: image /home/ko is the shared read-only base (lowerdir), the PVC keeps only this session's diff (upperdir); no per-session full copy of home
+      #[why] privileged + root: mount(2) inside the container needs it; kubectl exec re-enters as ko via su
+      securityContext: {privileged: true, runAsUser: 0}
+      command:
+        - sh
+        - -c
+        - |
+          mkdir -p /mnt/home/upper /mnt/home/work
+          mount -t overlay overlay -o lowerdir=/home/ko,upperdir=/mnt/home/upper,workdir=/mnt/home/work /home/ko
+          chown ko:ko /mnt/home/upper
+          exec sleep infinity
+      volumeMounts: [{name: home, mountPath: /mnt/home}]
   volumes:
     - name: home
       persistentVolumeClaim: {claimName: "${SESSION}-home"}
-##[<] 🤖🤖
+##[<] 🤖🤖🤖
