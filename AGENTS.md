@@ -53,6 +53,7 @@ Each convention dir carries a runnable `example/`. This repo itself follows all 
 ### Environment Variables:
 
 `DEV_SANDBOX_TAG=tag` dev-sandbox image tag to pull, unset -> latest
+`OCI_IMAGES_DIR=path` oci-images checkout the local image build runs in, unset -> sibling ../infra/oci-images
 `SESSION=name` session name (pod + pvc); required by stop/rm, unset on run-session -> s-<datetime>
 
 ### Docs:
@@ -61,11 +62,15 @@ Each convention dir carries a runnable `example/`. This repo itself follows all 
 
 ### Wrappers:
 
-`run-all`: `run-image-pull -> run-cluster-up -> run-image-load -> run-session` full flow: pull image, cluster up, load image, open a session shell
+`run-all`: `run-image-pull -> run-cluster-up -> run-image-load -> run-session` full flow from the published image: pull, cluster up, load, open a session shell
+`run-all-build`: `run-image-build -> run-cluster-up -> run-image-load -> run-session` full flow from local builds: build ci-linux + dev-sandbox in oci-images, cluster up, load, open a session shell
+`run-all-scratch`: `run-prune -> run-all-build` run-all-build from scratch: delete the cluster and prune local images first
 
 ### Sandbox:
 
 `run-image-pull` pull the published dev-sandbox image (DEV_SANDBOX_TAG) and retag it sandbox:local
+`run-image-build` build ci-linux + dev-sandbox locally (make in OCI_IMAGES_DIR) and retag sandbox:local
+`run-prune` delete the kind cluster and prune the local sandbox images (sandbox/dev-sandbox/ci-linux :local, dangling, build cache)
 `run-cluster-up` create the single-node kind cluster `sandbox` (no-op when up)
 `run-cluster-down` delete the kind cluster `sandbox` (sessions and PVCs go with it)
 `run-image-load` load sandbox:local into the kind cluster

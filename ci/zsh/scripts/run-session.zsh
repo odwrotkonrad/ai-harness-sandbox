@@ -18,6 +18,7 @@ if ! $kc get pod $SESSION >/dev/null 2>&1; then
 fi
 
 $kc wait --for=condition=Ready pod/$SESSION --timeout=300s
+#[why] runtime secret pass, mirrors the macos vm SendEnv flow: host token rides the exec into ko's login shell (su -w whitelists it), never baked or stored
 #[why] container runs as root (overlay mount); su drops into ko's login zsh
-exec $kc exec -it $SESSION -- su - ko
+exec $kc exec -it $SESSION -- env "OP_SERVICE_ACCOUNT_TOKEN=${OP_SERVICE_ACCOUNT_TOKEN-}" su -w OP_SERVICE_ACCOUNT_TOKEN - ko
 ##[<] 🤖🤖🤖
