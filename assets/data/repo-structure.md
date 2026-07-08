@@ -3,6 +3,7 @@ assets
   data
   docs-agents
 ci
+  k8s
   zsh
     scripts
 templates

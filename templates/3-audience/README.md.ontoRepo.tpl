@@ -6,7 +6,8 @@ Local claude session sandbox.
 
 ## Layout
 
-- `ci/kind.yml` — two-node kind cluster config (control-plane + worker), cluster name `sandbox`; session pods run on the worker.
+- `ci/k8s/kind.yml` — two-node kind cluster config (control-plane + worker), cluster name `sandbox`; session pods run on the worker.
+- `ci/k8s/session.yml` — session pod + home PVC manifest, `${SESSION}` env-substituted at apply time.
 - `ci/zsh/scripts/` — zsh wrappers behind the Makefile targets.
 
 The pod image is `registry.gitlab.com/konradodwrot/infra/oci-images/dev-sandbox`
@@ -19,7 +20,7 @@ cluster so pods run with `imagePullPolicy: Never`.
 ## Use
 
 ```sh
-$ make run-image-pull run-cluster-up run-image-load
+$ make run-all
 $ make run-session
 $ make run-session SESSION=s-mytopic
 $ make run-session-ls

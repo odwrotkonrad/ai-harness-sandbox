@@ -1,0 +1,34 @@
+##[>] 🤖🤖
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: "${SESSION}-home"
+  labels: {app: claude-sandbox, session: "${SESSION}"}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: {requests: {storage: 16Gi}}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "${SESSION}"
+  labels: {app: claude-sandbox, session: "${SESSION}"}
+spec:
+  restartPolicy: Always
+  initContainers:
+    - name: seed-home
+      image: sandbox:local
+      imagePullPolicy: Never
+      securityContext: {runAsUser: 0}
+      command: [sh, -c, 'if [ -z "$(ls -A /mnt/home)" ]; then cp -a /home/ko/. /mnt/home/; fi']
+      volumeMounts: [{name: home, mountPath: /mnt/home}]
+  containers:
+    - name: sandbox
+      image: sandbox:local
+      imagePullPolicy: Never
+      command: [sleep, infinity]
+      volumeMounts: [{name: home, mountPath: /home/ko}]
+  volumes:
+    - name: home
+      persistentVolumeClaim: {claimName: "${SESSION}-home"}
+##[<] 🤖🤖

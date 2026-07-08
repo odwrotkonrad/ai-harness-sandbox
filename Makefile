@@ -4,7 +4,7 @@ SHELL := zsh
 .SHELLFLAGS := -c
 export PATH := $(CURDIR)/ci/zsh/scripts:$(PATH)
 
-WRAPPERS :=
+WRAPPERS := run-all
 COMMANDS := render-templates run-repo-ci-prepare-hooks run-repo-ci-precommit-all run-image-pull run-cluster-up run-cluster-down run-image-load run-session run-session-stop run-session-rm run-session-ls
 
 .PHONY: $(WRAPPERS) $(COMMANDS)
@@ -23,6 +23,11 @@ export SESSION
 render-templates:
 	@che render-templates
 ##[<] Docs
+
+##[>] Wrappers [genai-include]
+#[what] full flow: pull image, cluster up, load image, open a session shell
+run-all: run-image-pull run-cluster-up run-image-load run-session
+##[<] Wrappers
 
 ##[>] Sandbox [genai-include]
 #[what] pull the published dev-sandbox image (DEV_SANDBOX_TAG) and retag it sandbox:local

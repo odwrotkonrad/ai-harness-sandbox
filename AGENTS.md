@@ -57,6 +57,10 @@ Each convention dir carries a runnable `example/`. This repo itself follows all 
 
 `render-templates` render *.ontoRepo.tpl onto the repo (.env, makefile.agents.md, repo-structure.md, CLAUDE.md, AGENTS.md, README.md)
 
+### Wrappers:
+
+`run-all`: `run-image-pull -> run-cluster-up -> run-image-load -> run-session` full flow: pull image, cluster up, load image, open a session shell
+
 ### Sandbox:
 
 `run-image-pull` pull the published dev-sandbox image (DEV_SANDBOX_TAG) and retag it sandbox:local
@@ -80,6 +84,7 @@ assets
   data
   docs-agents
 ci
+  k8s
   zsh
     scripts
 templates
