@@ -5,17 +5,14 @@ SHELL := zsh
 export PATH := $(CURDIR)/ci/zsh/scripts:$(PATH)
 
 WRAPPERS :=
-COMMANDS := render-templates run-repo-ci-prepare-hooks run-repo-ci-precommit-all run-image-build run-cluster-up run-cluster-down run-image-load run-session run-session-stop run-session-rm run-session-ls
+COMMANDS := render-templates run-repo-ci-prepare-hooks run-repo-ci-precommit-all run-image-pull run-cluster-up run-cluster-down run-image-load run-session run-session-stop run-session-rm run-session-ls
 
 .PHONY: $(WRAPPERS) $(COMMANDS)
 
 ##[>] Environment Variables [genai-include]
-#[what] local configs checkout baked into the image (docker build context), unset -> sibling ../configs
-#[vals] path
-export CONFIGS_DIR
-#[what] in-image path the configs checkout bakes to, unset -> /home/ko/projects/gitlab/<configs parent dir>/configs
-#[vals] path
-export CONFIGS_BAKE_DIR
+#[what] dev-sandbox image tag to pull, unset -> latest
+#[vals] tag
+export DEV_SANDBOX_TAG
 #[what] session name (pod + pvc); required by stop/rm, unset on run-session -> s-<datetime>
 #[vals] name
 export SESSION
@@ -28,9 +25,9 @@ render-templates:
 ##[<] Docs
 
 ##[>] Sandbox [genai-include]
-#[what] build sandbox:local from the local configs checkout (dev-sandbox base + baked configs)
-run-image-build:
-	@run-image-build.zsh
+#[what] pull the published dev-sandbox image (DEV_SANDBOX_TAG) and retag it sandbox:local
+run-image-pull:
+	@run-image-pull.zsh
 
 #[what] create the single-node kind cluster `sandbox` (no-op when up)
 run-cluster-up:

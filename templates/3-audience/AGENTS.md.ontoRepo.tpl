@@ -1,6 +1,6 @@
 # sandbox
 
-Local claude session sandbox: kind cluster plus per-session pods running a config-baked image built FROM the published dev-sandbox base.
+Local claude session sandbox: kind cluster plus per-session pods running the published config-baked dev-sandbox image from infra/oci-images.
 
 @assets/docs-agents/purpose.md
 

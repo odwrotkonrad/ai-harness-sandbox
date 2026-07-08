@@ -9,43 +9,46 @@ Local claude session sandbox.
 
 Local claude session sandbox: a two-node kind cluster (`sandbox`, one
 control-plane node for the management plane, one worker node for the data
-plane) running persistent per-session pods on the worker from a locally built
-`sandbox:local` image. Owns
-the published `dev-sandbox` toolchain base (debian bookworm, multi-arch
-arm64 + amd64: go, che, render-tpl, lefthook, yq, zsh), built by CI to this
-project's container registry. The final image builds FROM that base locally,
-baking the local `configs` checkout at build time (che `run-sync-full`,
-cli/linux profile, secrets skipped). Each session pod mounts a PVC at
-`/home/ko`, seeded from the image's baked home, so session state survives pod
-restart and shutdown.
+plane) running persistent per-session pods on the worker. The pod image is the
+published config-baked `dev-sandbox` image from `infra/oci-images`
+(`registry.gitlab.com/konradodwrot/infra/oci-images/dev-sandbox`), pulled and
+retagged `sandbox:local`, then loaded into the cluster. Each session pod
+mounts a PVC at `/home/ko`, seeded from the image's baked home, so session
+state survives pod restart and shutdown. This repo owns only the runtime:
+kind/k8s config plus session utils and commands.
 
 ### Why It Exists
 
 Claude sessions need an isolated shell carrying the full personal config, one
-container per session, without touching the host. Building the config-baked
-image locally keeps secrets out of registries and reuses the exact configs
-checkout on disk; kind gives cheap named, persistent, explicitly deleted
-session pods.
+container per session, without touching the host. The config-baked image is
+built and published by `infra/oci-images` (public configs, secrets skipped),
+so this repo pulls a ready image instead of building one; kind gives cheap
+named, persistent, explicitly deleted session pods.
 
 ### Goals
 
-- One command from image to shell: build, cluster up, load, session exec.
-- One published multi-arch toolchain base; config baking stays local.
+- One command from image to shell: pull, cluster up, load, session exec.
+- No image building here: the published dev-sandbox image is the pod image.
 - Full personal config inside the pod: zsh, che, claude state, same as host cli/linux.
 - Persistent named sessions: home survives pod restart, deleted only explicitly.
-- No secrets baked: renders with op:// secret refs are skipped at build time.
+- Offline-friendly: image loaded into the cluster, pods run `imagePullPolicy: Never`, no pull secrets.
 
 ## Layout
 
-- `ci/dev-sandbox/Dockerfile` — published toolchain base `registry.gitlab.com/konradodwrot/sandbox/dev-sandbox` (multi-arch arm64 + amd64: go, che, render-tpl, lefthook, yq, zsh), built by CI, pins in `ci/tool-versions.env`.
-- `ci/Dockerfile` — final `sandbox:local` image: `FROM dev-sandbox`, bakes the local `configs` checkout via che `run-sync-full` (cli/linux profile, secrets skipped).
 - `ci/kind.yml` — two-node kind cluster config (control-plane + worker), cluster name `sandbox`; session pods run on the worker.
 - `ci/zsh/scripts/` — zsh wrappers behind the Makefile targets.
+
+The pod image is `registry.gitlab.com/konradodwrot/infra/oci-images/dev-sandbox`
+(config-baked, no secrets; amd64 on bare tags, arm64 with an `-arm64` suffix),
+built and published by `infra/oci-images`. `run-image-pull` pulls it
+(`DEV_SANDBOX_TAG`, default `latest`, arch suffix auto-appended on arm64 hosts)
+and retags it `sandbox:local`; `run-image-load` loads that into the
+cluster so pods run with `imagePullPolicy: Never`.
 
 ## Use
 
 ```sh
-$ make run-image-build run-cluster-up run-image-load
+$ make run-image-pull run-cluster-up run-image-load
 $ make run-session
 $ make run-session SESSION=s-mytopic
 $ make run-session-ls

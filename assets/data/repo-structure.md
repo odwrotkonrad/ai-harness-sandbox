@@ -3,7 +3,6 @@ assets
   data
   docs-agents
 ci
-  dev-sandbox
   zsh
     scripts
 templates

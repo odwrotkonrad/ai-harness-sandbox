@@ -3,8 +3,7 @@
 
 ### Environment Variables:
 
-`CONFIGS_DIR=path` local configs checkout baked into the image (docker build context), unset -> sibling ../configs
-`CONFIGS_BAKE_DIR=path` in-image path the configs checkout bakes to, unset -> /home/ko/projects/gitlab/<configs parent dir>/configs
+`DEV_SANDBOX_TAG=tag` dev-sandbox image tag to pull, unset -> latest
 `SESSION=name` session name (pod + pvc); required by stop/rm, unset on run-session -> s-<datetime>
 
 ### Docs:
@@ -13,7 +12,7 @@
 
 ### Sandbox:
 
-`run-image-build` build sandbox:local from the local configs checkout (dev-sandbox base + baked configs)
+`run-image-pull` pull the published dev-sandbox image (DEV_SANDBOX_TAG) and retag it sandbox:local
 `run-cluster-up` create the single-node kind cluster `sandbox` (no-op when up)
 `run-cluster-down` delete the kind cluster `sandbox` (sessions and PVCs go with it)
 `run-image-load` load sandbox:local into the kind cluster
