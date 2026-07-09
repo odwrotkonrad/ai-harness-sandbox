@@ -25,7 +25,13 @@ if { [[ -z $gitlab_token ]] && (( $+commands[op] )) } {
   gitlab_token=$(op read 'op://ProgrammaticAccess/gitlab/access_token' 2>/dev/null) || gitlab_token=''
 }
 
+#[why] claude auth: host keychain creds can't mount into linux, a `claude setup-token` token stored in 1password rides the env instead
+typeset claude_token=${CLAUDE_CODE_OAUTH_TOKEN-}
+if { [[ -z $claude_token ]] && (( $+commands[op] )) } {
+  claude_token=$(op read 'op://ProgrammaticAccess/claude/oauth_token' 2>/dev/null) || claude_token=''
+}
+
 #[why] runtime secret pass, mirrors the macos vm SendEnv flow: host tokens ride the exec into ko's login shell (su -w whitelists them), never baked or stored
 #[why] container runs as root (overlay mount); su drops into ko's login zsh
-exec $kc exec -it $SESSION -- env "OP_SERVICE_ACCOUNT_TOKEN=${OP_SERVICE_ACCOUNT_TOKEN-}" "GITLAB_TOKEN=$gitlab_token" su -w OP_SERVICE_ACCOUNT_TOKEN,GITLAB_TOKEN - ko
+exec $kc exec -it $SESSION -- env "OP_SERVICE_ACCOUNT_TOKEN=${OP_SERVICE_ACCOUNT_TOKEN-}" "GITLAB_TOKEN=$gitlab_token" "CLAUDE_CODE_OAUTH_TOKEN=$claude_token" su -w OP_SERVICE_ACCOUNT_TOKEN,GITLAB_TOKEN,CLAUDE_CODE_OAUTH_TOKEN - ko
 ##[<] 🤖🤖🤖
