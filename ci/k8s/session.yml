@@ -1,0 +1,37 @@
+##[>] 🤖🤖🤖
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sandbox-home
+  labels: {app: claude-sandbox}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: {requests: {storage: 16Gi}}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "${SESSION}"
+  labels: {app: claude-sandbox, session: "${SESSION}"}
+spec:
+  restartPolicy: Always
+  containers:
+    - name: sandbox
+      image: sandbox:local
+      imagePullPolicy: Never
+      #[why] home as overlay: image /home/ko is the shared read-only base (lowerdir), the shared PVC keeps only this session's diff under /mnt/home/<session>; no per-session PVC, no full copy of home
+      #[why] privileged + root: mount(2) inside the container needs it; kubectl exec re-enters as ko via su
+      securityContext: {privileged: true, runAsUser: 0}
+      command:
+        - sh
+        - -c
+        - |
+          mkdir -p "/mnt/home/${SESSION}/upper" "/mnt/home/${SESSION}/work"
+          chown ko:ko "/mnt/home/${SESSION}/upper"
+          mount -t overlay overlay -o "lowerdir=/home/ko,upperdir=/mnt/home/${SESSION}/upper,workdir=/mnt/home/${SESSION}/work" /home/ko
+          exec sleep infinity
+      volumeMounts: [{name: home, mountPath: /mnt/home}]
+  volumes:
+    - name: home
+      persistentVolumeClaim: {claimName: sandbox-home}
+##[<] 🤖🤖🤖
