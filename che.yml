@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://gitlab.com/konradodwrot/go-modules/-/raw/main/che/assets/data/che.schema.json
 ##[>] 🤖🤖
 ontoRepo:
-  options: {autoExec: true}
+  options: {autoDiscover: true}
   include:
     renderTemplates:
       - files:
@@ -17,7 +17,7 @@ ontoRepo:
               - {path: AGENTS.md, options: {renderReferencedFiles: true}}
 
 claude-agents:
-  options: {autoExec: true, execIf: ['builtin:isVirt']}
+  options: {autoDiscover: true, execIf: ['builtin:isVirt']}
   include:
     renderTemplates:
       - ctx: {repo: Sandbox}
