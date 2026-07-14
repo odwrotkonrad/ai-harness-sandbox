@@ -15,8 +15,14 @@ published config-baked `dev-sandbox` image from `infra/oci-images`
 retagged `sandbox:local`, then loaded into the cluster. Session home is an
 overlayfs: the image's baked `/home/ko` is the shared read-only base, one
 shared PVC keeps each session's writable diff, so session state survives pod
-restart and shutdown without copying the base per session. This repo owns only
-the runtime: kind/k8s config plus session utils and commands.
+restart and shutdown without copying the base per session. Cilium is the CNI:
+session egress runs default-deny with a `CiliumNetworkPolicy` `toFQDNs`
+allowlist, so a pod reaches only allowlisted domains over HTTPS and everything
+else (raw IPs, unknown domains, plain HTTP on port 80) drops in-kernel. Hubble
+exports flow/drop metrics that ride the existing sandbox→host otelcol pipe into
+the host Prometheus/Grafana, so egress (allowed vs denied, top-denied FQDN,
+per-source) is queryable there. This repo owns only the runtime: kind/k8s config
+plus session utils and commands.
 
 ### Why It Exists
 
@@ -34,11 +40,15 @@ named, persistent, explicitly deleted session pods.
 - Persistent named sessions: home diff survives pod restart, deleted only explicitly.
 - Space-efficient sessions: one shared home base (image layer), per-session overlay diffs on one PVC.
 - Offline-friendly: image loaded into the cluster, pods run `imagePullPolicy: Never`, no pull secrets.
+- Egress control: Cilium CNI, default-deny + FQDN allowlist, HTTPS only (plain HTTP denied).
+- Egress visible: Hubble flow/drop metrics ride the existing otelcol pipe into host Prometheus/Grafana.
 
 ## Layout
 
-- `ci/k8s/kind.yml` — two-node kind cluster config (control-plane + worker), cluster name `sandbox`; session pods run on the worker.
+- `ci/k8s/kind.yml` — two-node kind cluster config (control-plane + worker), cluster name `sandbox`, `disableDefaultCNI` (Cilium is the CNI); session pods run on the worker.
 - `ci/k8s/session.yml` — session pod + shared home PVC manifest, `${SESSION}` env-substituted at apply time.
+- `ci/k8s/netpol.yml` — `CiliumNetworkPolicy`: default-deny egress baseline (DNS + in-cluster telemetry) plus the FQDN allowlist (443 only).
+- `ci/k8s/otelcol.yml` — in-cluster otel collector; forwards session telemetry to the host otelcol and scrapes Hubble flow metrics into the same pipe.
 - `ci/zsh/scripts/` — zsh wrappers behind the Makefile targets.
 
 The pod image is `registry.gitlab.com/konradodwrot/infra/oci-images/dev-sandbox`
@@ -66,6 +76,30 @@ own subdir on the one shared `sandbox-home` PVC (no per-session copy of the
 base). Exiting the shell leaves the pod running; `run-session` with the same
 `SESSION` reattaches. `run-session-stop` deletes the pod but keeps the diff
 (session survives); `run-session-rm` deletes both.
+
+## Traffic management
+
+Session egress is Cilium-enforced default-deny. `ci/k8s/netpol.yml` holds two
+`CiliumNetworkPolicy` objects selecting the session pods (`app: claude-sandbox`):
+a baseline that allows only cluster DNS (kube-dns, with resolution snooping so
+Cilium can match FQDNs) and the in-cluster otel collector, and an allowlist that
+permits a fixed set of domains on 443 (TCP) only. Anything not listed — raw IPs,
+unknown domains, and all plain HTTP on port 80 — is dropped in-kernel; there is
+no port-80 rule anywhere, so HTTP is denied even for allowlisted domains.
+
+Cilium images pull from quay.io at install time (`run-cilium-up`), so cluster
+bootstrap needs network (it already does, to pull the dev-sandbox image).
+
+**Extend the allowlist:** add one `matchName`/`matchPattern` line under
+`toFQDNs` in the `sandbox-egress-fqdn-allowlist` policy, then `make run-netpol-up`.
+
+**Observe egress:** Hubble runs with OpenMetrics on (`:9965` on each Cilium
+agent). The in-cluster otel collector scrapes those `hubble_*` flow/drop/dns
+series and forwards them down the existing pipe to the host otelcol, so they land
+in host Prometheus (`hubble_flows_processed_total`, `hubble_drop_total`,
+`hubble_dns_queries_total`, labeled by `verdict` and resolved `destination`
+FQDN) and are queryable in Grafana Explore. `hubble observe --verdict DROPPED`
+gives the same view interactively.
 
 ## License
 

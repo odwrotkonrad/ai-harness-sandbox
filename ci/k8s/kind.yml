@@ -2,6 +2,9 @@
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: sandbox
+#[why] cilium owns the dataplane (FQDN egress policy): drop kindnet so cilium is the CNI; kube-proxy stays (FQDN policy needs no kubeProxyReplacement)
+networking:
+  disableDefaultCNI: true
 #[why] control-plane keeps its NoSchedule taint in multi-node clusters: mgmt plane stays clean, session pods land on the worker
 nodes:
   - role: control-plane

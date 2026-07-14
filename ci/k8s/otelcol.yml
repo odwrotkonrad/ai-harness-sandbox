@@ -11,6 +11,20 @@ data:
         protocols:
           grpc: {endpoint: 0.0.0.0:4317}
           http: {endpoint: 0.0.0.0:4318}
+      #[why] scrape the hubble-metrics openmetrics endpoint (:9965) on each cilium agent pod in kube-system; the resulting hubble_* flow/drop/dns series ride the existing metrics pipeline to the host otelcol -> :8889 -> host prometheus, feeding the sandbox-egress grafana dashboard
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: hubble
+              kubernetes_sd_configs:
+                - {role: pod, namespaces: {names: [kube-system]}}
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_pod_label_k8s_app]
+                  action: keep
+                  regex: cilium
+                - source_labels: [__meta_kubernetes_pod_ip]
+                  target_label: __address__
+                  replacement: $$1:9965
 
     processors:
       batch: {}
@@ -29,8 +43,37 @@ data:
     service:
       pipelines:
         traces:  {receivers: [otlp], processors: [resource/sandbox, batch], exporters: [otlp]}
-        metrics: {receivers: [otlp], processors: [resource/sandbox, batch], exporters: [otlp]}
+        metrics: {receivers: [otlp, prometheus], processors: [resource/sandbox, batch], exporters: [otlp]}
         logs:    {receivers: [otlp], processors: [resource/sandbox, batch], exporters: [otlp]}
+---
+#[why] the prometheus receiver's kubernetes_sd needs to list pods to discover the cilium agents; scoped to pod get/list/watch only
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sandbox-otelcol
+  labels: {app: sandbox-otelcol}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sandbox-otelcol
+  labels: {app: sandbox-otelcol}
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sandbox-otelcol
+  labels: {app: sandbox-otelcol}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: sandbox-otelcol
+subjects:
+  - {kind: ServiceAccount, name: sandbox-otelcol, namespace: default}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -44,6 +87,7 @@ spec:
     metadata:
       labels: {app: sandbox-otelcol}
     spec:
+      serviceAccountName: sandbox-otelcol
       #[why] the control-plane node is tainted; tolerate it so the collector schedules on either node
       tolerations:
         - {key: node-role.kubernetes.io/control-plane, operator: Exists, effect: NoSchedule}

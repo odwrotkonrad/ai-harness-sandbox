@@ -10,8 +10,14 @@ published config-baked `dev-sandbox` image from `infra/oci-images`
 retagged `sandbox:local`, then loaded into the cluster. Session home is an
 overlayfs: the image's baked `/home/ko` is the shared read-only base, one
 shared PVC keeps each session's writable diff, so session state survives pod
-restart and shutdown without copying the base per session. This repo owns only
-the runtime: kind/k8s config plus session utils and commands.
+restart and shutdown without copying the base per session. Cilium is the CNI:
+session egress runs default-deny with a `CiliumNetworkPolicy` `toFQDNs`
+allowlist, so a pod reaches only allowlisted domains over HTTPS and everything
+else (raw IPs, unknown domains, plain HTTP on port 80) drops in-kernel. Hubble
+exports flow/drop metrics that ride the existing sandbox→host otelcol pipe into
+the host Prometheus/Grafana, so egress (allowed vs denied, top-denied FQDN,
+per-source) is queryable there. This repo owns only the runtime: kind/k8s config
+plus session utils and commands.
 
 ## Why It Exists
 
@@ -29,3 +35,5 @@ named, persistent, explicitly deleted session pods.
 - Persistent named sessions: home diff survives pod restart, deleted only explicitly.
 - Space-efficient sessions: one shared home base (image layer), per-session overlay diffs on one PVC.
 - Offline-friendly: image loaded into the cluster, pods run `imagePullPolicy: Never`, no pull secrets.
+- Egress control: Cilium CNI, default-deny + FQDN allowlist, HTTPS only (plain HTTP denied).
+- Egress visible: Hubble flow/drop metrics ride the existing otelcol pipe into host Prometheus/Grafana.

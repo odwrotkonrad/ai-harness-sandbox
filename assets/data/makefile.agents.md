@@ -13,8 +13,8 @@
 
 ### Wrappers:
 
-`run-all`: `run-image-pull -> run-cluster-up -> run-image-load -> run-otelcol-up -> run-session` full flow from the published image: pull, cluster up, load, open a session shell
-`run-all-build`: `run-image-build -> run-cluster-up -> run-image-load -> run-otelcol-up -> run-session` full flow from local builds: build ci-linux + dev-sandbox in oci-images, cluster up, load, open a session shell
+`run-all`: `run-image-pull -> run-cluster-up -> run-cilium-up -> run-netpol-up -> run-image-load -> run-otelcol-up -> run-session` full flow from the published image: pull, cluster up, cilium + egress policy, load, open a session shell
+`run-all-build`: `run-image-build -> run-cluster-up -> run-cilium-up -> run-netpol-up -> run-image-load -> run-otelcol-up -> run-session` full flow from local builds: build ci-linux + dev-sandbox in oci-images, cluster up, cilium + egress policy, load, open a session shell
 `run-all-scratch`: `run-prune -> run-all-build` run-all-build from scratch: delete the cluster and prune local images first
 
 ### Sandbox:
@@ -24,6 +24,8 @@
 `run-prune` delete the kind cluster and prune the local sandbox images (sandbox/dev-sandbox/ci-linux :local, dangling, build cache)
 `run-cluster-up` create the single-node kind cluster `sandbox` (no-op when up)
 `run-cluster-down` delete the kind cluster `sandbox` (sessions and PVCs go with it)
+`run-cilium-up` install cilium as the CNI with hubble flow metrics (openmetrics :9965), wait ready (no-op when already ok); needs the cilium CLI on PATH
+`run-netpol-up` apply the default-deny + FQDN allowlist egress policy (ci/k8s/netpol.yml) to the session pods
 `run-image-load` load sandbox:local into the kind cluster
 `run-otelcol-up` deploy the in-cluster otel collector (forwards session telemetry to the host otelcol) and wait for rollout
 `run-session` create-or-reattach the SESSION pod (overlay home diff on the shared PVC) and exec a login zsh; exit leaves it running

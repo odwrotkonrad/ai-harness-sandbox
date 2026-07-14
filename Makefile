@@ -5,7 +5,7 @@ SHELL := zsh
 export PATH := $(CURDIR)/ci/zsh/scripts:$(PATH)
 
 WRAPPERS := run-all run-all-build run-all-scratch
-COMMANDS := render-templates run-repo-ci-prepare-hooks run-repo-ci-precommit-all run-image-pull run-image-build run-prune run-cluster-up run-cluster-down run-image-load run-otelcol-up run-session run-session-stop run-session-rm run-session-ls
+COMMANDS := render-templates run-repo-ci-prepare-hooks run-repo-ci-precommit-all run-image-pull run-image-build run-prune run-cluster-up run-cluster-down run-cilium-up run-netpol-up run-image-load run-otelcol-up run-session run-session-stop run-session-rm run-session-ls
 
 .PHONY: $(WRAPPERS) $(COMMANDS)
 
@@ -28,11 +28,11 @@ render-templates:
 ##[<] Docs
 
 ##[>] Wrappers [genai-include]
-#[what] full flow from the published image: pull, cluster up, load, open a session shell
-run-all: run-image-pull run-cluster-up run-image-load run-otelcol-up run-session
+#[what] full flow from the published image: pull, cluster up, cilium + egress policy, load, open a session shell
+run-all: run-image-pull run-cluster-up run-cilium-up run-netpol-up run-image-load run-otelcol-up run-session
 
-#[what] full flow from local builds: build ci-linux + dev-sandbox in oci-images, cluster up, load, open a session shell
-run-all-build: run-image-build run-cluster-up run-image-load run-otelcol-up run-session
+#[what] full flow from local builds: build ci-linux + dev-sandbox in oci-images, cluster up, cilium + egress policy, load, open a session shell
+run-all-build: run-image-build run-cluster-up run-cilium-up run-netpol-up run-image-load run-otelcol-up run-session
 
 #[what] run-all-build from scratch: delete the cluster and prune local images first
 run-all-scratch: run-prune run-all-build
@@ -58,6 +58,14 @@ run-cluster-up:
 #[what] delete the kind cluster `sandbox` (sessions and PVCs go with it)
 run-cluster-down:
 	@run-cluster-down.zsh
+
+#[what] install cilium as the CNI with hubble flow metrics (openmetrics :9965), wait ready (no-op when already ok); needs the cilium CLI on PATH
+run-cilium-up:
+	@run-cilium-up.zsh
+
+#[what] apply the default-deny + FQDN allowlist egress policy (ci/k8s/netpol.yml) to the session pods
+run-netpol-up:
+	@run-netpol-up.zsh
 
 #[what] load sandbox:local into the kind cluster
 run-image-load:

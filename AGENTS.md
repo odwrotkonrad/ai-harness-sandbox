@@ -15,8 +15,14 @@ published config-baked `dev-sandbox` image from `infra/oci-images`
 retagged `sandbox:local`, then loaded into the cluster. Session home is an
 overlayfs: the image's baked `/home/ko` is the shared read-only base, one
 shared PVC keeps each session's writable diff, so session state survives pod
-restart and shutdown without copying the base per session. This repo owns only
-the runtime: kind/k8s config plus session utils and commands.
+restart and shutdown without copying the base per session. Cilium is the CNI:
+session egress runs default-deny with a `CiliumNetworkPolicy` `toFQDNs`
+allowlist, so a pod reaches only allowlisted domains over HTTPS and everything
+else (raw IPs, unknown domains, plain HTTP on port 80) drops in-kernel. Hubble
+exports flow/drop metrics that ride the existing sandbox→host otelcol pipe into
+the host Prometheus/Grafana, so egress (allowed vs denied, top-denied FQDN,
+per-source) is queryable there. This repo owns only the runtime: kind/k8s config
+plus session utils and commands.
 
 ## Why It Exists
 
@@ -34,6 +40,8 @@ named, persistent, explicitly deleted session pods.
 - Persistent named sessions: home diff survives pod restart, deleted only explicitly.
 - Space-efficient sessions: one shared home base (image layer), per-session overlay diffs on one PVC.
 - Offline-friendly: image loaded into the cluster, pods run `imagePullPolicy: Never`, no pull secrets.
+- Egress control: Cilium CNI, default-deny + FQDN allowlist, HTTPS only (plain HTTP denied).
+- Egress visible: Hubble flow/drop metrics ride the existing otelcol pipe into host Prometheus/Grafana.
 
 # Conventions
 
@@ -63,8 +71,8 @@ Each convention dir carries a runnable `example/`. This repo itself follows all 
 
 ### Wrappers:
 
-`run-all`: `run-image-pull -> run-cluster-up -> run-image-load -> run-otelcol-up -> run-session` full flow from the published image: pull, cluster up, load, open a session shell
-`run-all-build`: `run-image-build -> run-cluster-up -> run-image-load -> run-otelcol-up -> run-session` full flow from local builds: build ci-linux + dev-sandbox in oci-images, cluster up, load, open a session shell
+`run-all`: `run-image-pull -> run-cluster-up -> run-cilium-up -> run-netpol-up -> run-image-load -> run-otelcol-up -> run-session` full flow from the published image: pull, cluster up, cilium + egress policy, load, open a session shell
+`run-all-build`: `run-image-build -> run-cluster-up -> run-cilium-up -> run-netpol-up -> run-image-load -> run-otelcol-up -> run-session` full flow from local builds: build ci-linux + dev-sandbox in oci-images, cluster up, cilium + egress policy, load, open a session shell
 `run-all-scratch`: `run-prune -> run-all-build` run-all-build from scratch: delete the cluster and prune local images first
 
 ### Sandbox:
@@ -74,6 +82,8 @@ Each convention dir carries a runnable `example/`. This repo itself follows all 
 `run-prune` delete the kind cluster and prune the local sandbox images (sandbox/dev-sandbox/ci-linux :local, dangling, build cache)
 `run-cluster-up` create the single-node kind cluster `sandbox` (no-op when up)
 `run-cluster-down` delete the kind cluster `sandbox` (sessions and PVCs go with it)
+`run-cilium-up` install cilium as the CNI with hubble flow metrics (openmetrics :9965), wait ready (no-op when already ok); needs the cilium CLI on PATH
+`run-netpol-up` apply the default-deny + FQDN allowlist egress policy (ci/k8s/netpol.yml) to the session pods
 `run-image-load` load sandbox:local into the kind cluster
 `run-otelcol-up` deploy the in-cluster otel collector (forwards session telemetry to the host otelcol) and wait for rollout
 `run-session` create-or-reattach the SESSION pod (overlay home diff on the shared PVC) and exec a login zsh; exit leaves it running
