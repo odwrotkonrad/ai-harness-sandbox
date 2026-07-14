@@ -9,4 +9,9 @@ networking:
 nodes:
   - role: control-plane
   - role: worker
+#[why] mirror localhost:5001 -> the host registry's in-network endpoint: host push (localhost:5001) and node pull (localhost:5001 inside the node) both resolve kind-registry:5000, so builds transfer only changed layers by digest
+containerdConfigPatches:
+  - |-
+    [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]
+      endpoint = ["http://kind-registry:5000"]
 ##[<] 🤖🤖
