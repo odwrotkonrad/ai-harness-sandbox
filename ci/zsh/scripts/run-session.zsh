@@ -27,5 +27,6 @@ if { [[ -z $gitlab_token ]] && (( $+commands[op] )) } {
 
 #[why] runtime secret pass, mirrors the macos vm SendEnv flow: host tokens ride the exec into ko's login shell (su -w whitelists them), never baked or stored
 #[why] container runs as root (overlay mount); su drops into ko's login zsh
-exec $kc exec -it $SESSION -- env "OP_SERVICE_ACCOUNT_TOKEN=${OP_SERVICE_ACCOUNT_TOKEN-}" "GITLAB_TOKEN=$gitlab_token" su -w OP_SERVICE_ACCOUNT_TOKEN,GITLAB_TOKEN - ko
+#[why] su - resets the env; whitelist the pod's OTEL_* overrides too so claude (shell env > settings.json) and codex (otel SDK reads env) target the in-cluster collector, not the baked localhost default
+exec $kc exec -it $SESSION -- env "OP_SERVICE_ACCOUNT_TOKEN=${OP_SERVICE_ACCOUNT_TOKEN-}" "GITLAB_TOKEN=$gitlab_token" su -w OP_SERVICE_ACCOUNT_TOKEN,GITLAB_TOKEN,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_RESOURCE_ATTRIBUTES - ko
 ##[<] 🤖🤖🤖

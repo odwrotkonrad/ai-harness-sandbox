@@ -5,7 +5,7 @@ SHELL := zsh
 export PATH := $(CURDIR)/ci/zsh/scripts:$(PATH)
 
 WRAPPERS := run-all run-all-build run-all-scratch
-COMMANDS := render-templates run-repo-ci-prepare-hooks run-repo-ci-precommit-all run-image-pull run-image-build run-prune run-cluster-up run-cluster-down run-image-load run-session run-session-stop run-session-rm run-session-ls
+COMMANDS := render-templates run-repo-ci-prepare-hooks run-repo-ci-precommit-all run-image-pull run-image-build run-prune run-cluster-up run-cluster-down run-image-load run-otelcol-up run-session run-session-stop run-session-rm run-session-ls
 
 .PHONY: $(WRAPPERS) $(COMMANDS)
 
@@ -29,10 +29,10 @@ render-templates:
 
 ##[>] Wrappers [genai-include]
 #[what] full flow from the published image: pull, cluster up, load, open a session shell
-run-all: run-image-pull run-cluster-up run-image-load run-session
+run-all: run-image-pull run-cluster-up run-image-load run-otelcol-up run-session
 
 #[what] full flow from local builds: build ci-linux + dev-sandbox in oci-images, cluster up, load, open a session shell
-run-all-build: run-image-build run-cluster-up run-image-load run-session
+run-all-build: run-image-build run-cluster-up run-image-load run-otelcol-up run-session
 
 #[what] run-all-build from scratch: delete the cluster and prune local images first
 run-all-scratch: run-prune run-all-build
@@ -62,6 +62,10 @@ run-cluster-down:
 #[what] load sandbox:local into the kind cluster
 run-image-load:
 	@run-image-load.zsh
+
+#[what] deploy the in-cluster otel collector (forwards session telemetry to the host otelcol) and wait for rollout
+run-otelcol-up:
+	@run-otelcol-up.zsh
 
 #[what] create-or-reattach the SESSION pod (overlay home diff on the shared PVC) and exec a login zsh; exit leaves it running
 run-session:
