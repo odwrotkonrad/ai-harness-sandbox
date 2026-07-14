@@ -4,8 +4,8 @@
 ### Environment Variables:
 
 `DEV_SANDBOX_TAG=tag` dev-sandbox image tag to pull, unset -> latest
-`OCI_IMAGES_DIR=path` oci-images checkout the local image build runs in, unset -> sibling ../infra/oci-images
-`SESSION=name` session name (pod + pvc); required by stop/rm, unset on run-session -> s-<datetime>
+`OCI_IMAGES_DIR=path` oci-images checkout the local image build runs in, unset -> sibling ../infra/oci-images, else ../../konradodwrot/infra/oci-images
+`SESSION=name` session name (pod + pvc); required by stop/rm, unset on session-create -> s-<datetime>, unset on session-attach -> most recent
 
 ### Docs:
 
@@ -13,8 +13,8 @@
 
 ### Wrappers:
 
-`run-all`: `run-image-pull -> run-cluster-up -> run-cilium-up -> run-netpol-up -> run-image-load -> run-otelcol-up -> run-session` full flow from the published image: pull, cluster up, cilium + egress policy, load, open a session shell
-`run-all-build`: `run-image-build -> run-cluster-up -> run-cilium-up -> run-netpol-up -> run-image-load -> run-otelcol-up -> run-session` full flow from local builds: build ci-linux + dev-sandbox in oci-images, cluster up, cilium + egress policy, load, open a session shell
+`run-all`: `run-image-pull -> run-registry-up -> run-cluster-up -> run-cilium-up -> run-netpol-up -> run-image-load -> run-otelcol-up -> session-create` remote flow: pull the published dev-sandbox image from the GitLab registry, registry up, cluster up, cilium + egress policy, push to local registry, open a session shell
+`run-all-build`: `run-image-build -> run-registry-up -> run-cluster-up -> run-cilium-up -> run-netpol-up -> run-image-load -> run-otelcol-up -> session-create` default local flow (bare `make`): build ci-linux + dev-sandbox in oci-images, registry up, cluster up, cilium + egress policy, push to local registry, open a session shell; no GitLab registry
 `run-all-scratch`: `run-prune -> run-all-build` run-all-build from scratch: delete the cluster and prune local images first
 
 ### Sandbox:
@@ -22,16 +22,18 @@
 `run-image-pull` pull the published dev-sandbox image (DEV_SANDBOX_TAG) and retag it sandbox:local
 `run-image-build` build ci-linux + dev-sandbox locally (make in OCI_IMAGES_DIR) and retag sandbox:local
 `run-prune` delete the kind cluster and prune the local sandbox images (sandbox/dev-sandbox/ci-linux :local, dangling, build cache)
+`run-registry-up` start the host-local registry (kind-registry, 127.0.0.1:5001) and join it to the kind network (no-op when running); must run before run-cluster-up so the containerd mirror patch resolves
 `run-cluster-up` create the single-node kind cluster `sandbox` (no-op when up)
 `run-cluster-down` delete the kind cluster `sandbox` (sessions and PVCs go with it)
 `run-cilium-up` install cilium as the CNI with hubble flow metrics (openmetrics :9965), wait ready (no-op when already ok); needs the cilium CLI on PATH
 `run-netpol-up` apply the default-deny + FQDN allowlist egress policy (ci/k8s/netpol.yml) to the session pods
-`run-image-load` load sandbox:local into the kind cluster
+`run-image-load` tag sandbox:local as localhost:5001/sandbox:local and push it to the host registry (only changed layers upload); session pods pull it via the containerd mirror
 `run-otelcol-up` deploy the in-cluster otel collector (forwards session telemetry to the host otelcol) and wait for rollout
-`run-session` create-or-reattach the SESSION pod (overlay home diff on the shared PVC) and exec a login zsh; exit leaves it running
-`run-session-stop` delete the SESSION pod, keep its home diff (session survives)
-`run-session-rm` delete the SESSION pod and its home diff
-`run-session-ls` list session pods and home diffs
+`session-create` create a new SESSION pod (overlay home diff on the shared PVC), render its GCP secrets, and exec a login zsh; exit leaves it running. SESSION unset -> s-<datetime>
+`session-attach` attach a login zsh to an existing session; SESSION unset -> most recent running session
+`session-stop` delete the SESSION pod, keep its home diff (session survives)
+`session-rm` delete the SESSION pod and its home diff
+`session-ls` list running sessions and all home diffs (running + stopped)
 
 ### CI:
 

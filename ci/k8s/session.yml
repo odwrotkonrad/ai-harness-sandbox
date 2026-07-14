@@ -17,8 +17,9 @@ spec:
   restartPolicy: Always
   containers:
     - name: sandbox
-      image: sandbox:local
-      imagePullPolicy: Never
+      #[why] pull from the host registry via the containerd mirror (localhost:5001 -> kind-registry:5000, in-node): Always because :local is a mutable tag (rebuild+push reuses it), so IfNotPresent would pin the node to the first image it cached and never pick up a rebuild; the registry is host-local so Always costs a digest check, no external network
+      image: localhost:5001/sandbox:local
+      imagePullPolicy: Always
       #[why] override the baked localhost:4317 default: session telemetry (claude + codex, all grpc) targets the in-cluster collector, which forwards to the host otelcol; OTEL_RESOURCE_ATTRIBUTES stamps this session's identity on every signal so sessions are distinguishable from each other and (with the collector's deployment.environment=sandbox) from the host
       #[why] CHE_OTEL_ENDPOINT is che's own knob (host:port, no scheme): che ignores OTEL_EXPORTER_OTLP_ENDPOINT, so without this che (incl. the bootstrap render) flushes to the baked localhost:4317 and errors connection-refused
       env:

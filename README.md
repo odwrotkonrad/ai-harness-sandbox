@@ -12,7 +12,11 @@ control-plane node for the management plane, one worker node for the data
 plane) running persistent per-session pods on the worker. The pod image is the
 published config-baked `dev-sandbox` image from `infra/oci-images`
 (`registry.gitlab.com/konradodwrot/infra/oci-images/dev-sandbox`), pulled and
-retagged `sandbox:local`, then loaded into the cluster. Session home is an
+retagged `sandbox:local`, then pushed to a host-local `registry:2`
+(`kind-registry`, `127.0.0.1:5001`) that a containerd mirror patch maps to
+`kind-registry:5000` in-network, so nodes pull it and iterative builds transfer
+only changed layers by digest instead of re-loading the whole image tar. Session
+home is an
 overlayfs: the image's baked `/home/ko` is the shared read-only base, one
 shared PVC keeps each session's writable diff, so session state survives pod
 restart and shutdown without copying the base per session. Cilium is the CNI:
@@ -39,7 +43,7 @@ named, persistent, explicitly deleted session pods.
 - Full personal config inside the pod: zsh, che, claude state, same as host cli/linux.
 - Persistent named sessions: home diff survives pod restart, deleted only explicitly.
 - Space-efficient sessions: one shared home base (image layer), per-session overlay diffs on one PVC.
-- Offline-friendly: image loaded into the cluster, pods run `imagePullPolicy: Never`, no pull secrets.
+- Offline-friendly: image pushed to a host-local registry, nodes pull it in-network via the containerd mirror (`imagePullPolicy: Always`, host-local so no external network), no pull secrets.
 - Egress control: Cilium CNI, default-deny + FQDN allowlist, HTTPS only (plain HTTP denied).
 - Egress visible: Hubble flow/drop metrics ride the existing otelcol pipe into host Prometheus/Grafana.
 
@@ -55,27 +59,36 @@ The pod image is `registry.gitlab.com/konradodwrot/infra/oci-images/dev-sandbox`
 (config-baked, no secrets; amd64 on bare tags, arm64 with an `-arm64` suffix),
 built and published by `infra/oci-images`. `run-image-pull` pulls it
 (`DEV_SANDBOX_TAG`, default `latest`, arch suffix auto-appended on arm64 hosts)
-and retags it `sandbox:local`; `run-image-load` loads that into the
-cluster so pods run with `imagePullPolicy: Never`.
+and retags it `sandbox:local`; `run-registry-up` starts a host-local
+`registry:2` (`kind-registry`, `127.0.0.1:5001`) and `run-image-load` tags
+`sandbox:local` as `localhost:5001/sandbox:local` and pushes it there. A
+containerd mirror patch in `kind.yml` maps `localhost:5001` to
+`kind-registry:5000` in-network, so nodes pull from the same registry and
+iterative builds transfer only changed layers by digest (no full-image tar
+re-load). Pods run with `imagePullPolicy: Always` (the `:local` tag is mutable,
+so a rebuild+push must reach the pod); the registry is host-local, so pulls stay
+off the external network.
 
 ## Use
 
 ```sh
 $ make run-all
-$ make run-session
-$ make run-session SESSION=s-mytopic
-$ make run-session-ls
-$ make run-session-stop SESSION=s-mytopic
-$ make run-session-rm SESSION=s-mytopic
+$ make session-create
+$ make session-create SESSION=s-mytopic
+$ make session-attach
+$ make session-attach SESSION=s-mytopic
+$ make session-ls
+$ make session-stop SESSION=s-mytopic
+$ make session-rm SESSION=s-mytopic
 $ make run-cluster-down
 ```
 
 A session is a named pod whose `/home/ko` is an overlayfs: the image's baked
 home is the shared read-only base, the session's writable diff lives in its
 own subdir on the one shared `sandbox-home` PVC (no per-session copy of the
-base). Exiting the shell leaves the pod running; `run-session` with the same
-`SESSION` reattaches. `run-session-stop` deletes the pod but keeps the diff
-(session survives); `run-session-rm` deletes both.
+base). Exiting the shell leaves the pod running; `session-attach` (no
+`SESSION` -> most recent) reattaches. `session-stop` deletes the pod but keeps
+the diff (session survives); `session-rm` deletes both.
 
 ## Traffic management
 
