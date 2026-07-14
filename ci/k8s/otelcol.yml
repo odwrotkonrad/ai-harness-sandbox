@@ -24,6 +24,7 @@ data:
                   regex: cilium
                 - source_labels: [__meta_kubernetes_pod_ip]
                   target_label: __address__
+                  #[why] $$ escapes to a literal $ (the collector env-expands its own config); leaves $1 for prometheus relabel capture, do not "fix" to $1
                   replacement: $$1:9965
 
     processors:

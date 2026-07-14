@@ -13,8 +13,10 @@ typeset -a kc=( kubectl --context kind-sandbox )
 (( $+commands[yq] )) || fn-exit-with 1 "${0:t}: yq not found"
 
 #[why] pod + pvc applied only when the pod is absent: reattach hits the running pod untouched
+typeset session_created=''
 if ! $kc get pod $SESSION >/dev/null 2>&1; then
   yq '(.. | select(tag == "!!str")) |= envsubst' $repo_root/ci/k8s/session.yml | $kc apply -f -
+  session_created=1
 fi
 
 $kc wait --for=condition=Ready pod/$SESSION --timeout=300s
@@ -31,9 +33,17 @@ if { [[ -z $gcp_sa_key ]] && (( $+commands[op] )) } {
   gcp_sa_key=$(op read 'op://ProgrammaticAccess/sandbox_restricted/sa_key' 2>/dev/null) || gcp_sa_key=''
 }
 
+#[why] on create only: re-render *.tpl secrets in the live overlay home so the sandbox's ssh keys resolve from GCP Secrets Manager (gcp:// via the injected ADC). the baked image skips secret renders (MK_DRY_RUN_RENDER_SECRETS), so a fresh pod has no keys until this runs. reattach skips it (keys already on the overlay diff)
+#[why] --skip-remote-refs keeps it to the local configs specs (no workspace clone/pull); GCP_SA_KEY=1 restores the op://<->gcp:// discriminator, which 40-gcp-adc unsets after materializing ADC in the same login shell
+if [[ -n $session_created ]] {
+  $kc exec $SESSION -- env "GCP_SA_KEY=$gcp_sa_key" su -w GCP_SA_KEY - ko -c \
+    'cd ~/projects/gitlab/konradodwrot/configs && GCP_SA_KEY=1 che render-templates --profiles cli/linux --skip-remote-refs'
+}
+
 #[why] runtime secret pass, mirrors the macos vm SendEnv flow: host tokens ride the exec into ko's login shell (su -w whitelists them), never baked or stored
 #[why] GCP_SA_KEY carries the SA key JSON; the pod login writes it to a file and points GOOGLE_APPLICATION_CREDENTIALS at it (see configs 00-local.zsh)
+#[why] OP_SERVICE_ACCOUNT_TOKEN is deliberately NOT forwarded: the pod resolves its secrets from GCP Secrets Manager (gcp:// via ADC), never 1password. glab (ln) authenticates from GITLAB_TOKEN, no op needed in the pod
 #[why] container runs as root (overlay mount); su drops into ko's login zsh
 #[why] su - resets the env; whitelist the pod's OTEL_* overrides too so claude (shell env > settings.json) and codex (otel SDK reads env) target the in-cluster collector, not the baked localhost default
-exec $kc exec -it $SESSION -- env "OP_SERVICE_ACCOUNT_TOKEN=${OP_SERVICE_ACCOUNT_TOKEN-}" "GITLAB_TOKEN=$gitlab_token" "GCP_SA_KEY=$gcp_sa_key" su -w OP_SERVICE_ACCOUNT_TOKEN,GITLAB_TOKEN,GCP_SA_KEY,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_RESOURCE_ATTRIBUTES - ko
+exec $kc exec -it $SESSION -- env "GITLAB_TOKEN=$gitlab_token" "GCP_SA_KEY=$gcp_sa_key" su -w GITLAB_TOKEN,GCP_SA_KEY,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_RESOURCE_ATTRIBUTES - ko
 ##[<] 🤖🤖🤖

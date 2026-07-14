@@ -1,9 +1,9 @@
 ##[>] 🤖🤖🤖
-#[why] baseline egress: selecting the session pods with any egress rule makes them default-deny, so DNS + in-cluster telemetry must be allowed explicitly; the dns rules let cilium snoop every resolution, the prerequisite for toFQDNs matching
+#[why] one policy selecting the session pods with any egress rule makes them default-deny, so every allowed destination is explicit. kube-dns rule: 53 + dns visibility (matchPattern "*") lets cilium snoop every resolution, the prerequisite for toFQDNs matching. otelcol rule: in-cluster telemetry on 4317. toFQDNs rule: the only internet egress, allowlisted FQDNs on 443 (TLS) only; no port-80 rule anywhere so plain HTTP is denied by default-deny, raw IPs and unlisted domains dropped in-kernel. extend by adding one matchName/matchPattern line under toFQDNs below
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
-  name: sandbox-egress-baseline
+  name: sandbox-egress
 spec:
   endpointSelector:
     matchLabels: {app: claude-sandbox}
@@ -11,7 +11,7 @@ spec:
     - toEndpoints:
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: kube-system
-            k8s-app: kube-dns
+            k8s:k8s-app: kube-dns
       toPorts:
         - ports:
             - {port: "53", protocol: UDP}
@@ -24,16 +24,6 @@ spec:
       toPorts:
         - ports:
             - {port: "4317", protocol: TCP}
----
-#[why] the only internet egress: allowlisted FQDNs on 443 (TLS) only; no port-80 rule anywhere so plain HTTP is denied by default-deny, raw IPs and unlisted domains dropped in-kernel. extend by adding one matchName/matchPattern line below
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: sandbox-egress-fqdn-allowlist
-spec:
-  endpointSelector:
-    matchLabels: {app: claude-sandbox}
-  egress:
     - toFQDNs:
         - {matchName: api.anthropic.com}
         - {matchPattern: "*.anthropic.com"}
