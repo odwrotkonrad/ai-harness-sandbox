@@ -21,29 +21,23 @@ fi
 
 $kc wait --for=condition=Ready pod/$SESSION --timeout=300s
 
-#[why] resolved from 1password at session start when not already in the host env
-typeset gitlab_token=${GITLAB_TOKEN-}
-if { [[ -z $gitlab_token ]] && (( $+commands[op] )) } {
-  gitlab_token=$(op read 'op://ProgrammaticAccess/gitlab/access_token' 2>/dev/null) || gitlab_token=''
-}
-
-#[why] restricted GCP SA key (JSON) from 1password: the pod's ADC credential, all che's gcp:// secret source needs to resolve the sandbox gitlab token + ssh key from Secrets Manager
+#[why] ONLY the GCP identity is injected: the restricted SA key (JSON) from 1password becomes the pod's ADC. every other sandbox secret (ssh keys, gitlab token) is fetched at runtime IN the pod from GCP Secrets Manager via this ADC, never read on the host and passed in
 typeset gcp_sa_key=${GCP_SA_KEY-}
 if { [[ -z $gcp_sa_key ]] && (( $+commands[op] )) } {
   gcp_sa_key=$(op read 'op://ProgrammaticAccess/sandbox_restricted/sa_key' 2>/dev/null) || gcp_sa_key=''
 }
+[[ -n $gcp_sa_key ]] || fn-exit-with 1 "${0:t}: no GCP SA key (op://ProgrammaticAccess/sandbox_restricted/sa_key empty); the pod's ADC identity is required"
 
 #[why] on create only: re-render *.tpl secrets in the live overlay home so the sandbox's ssh keys resolve from GCP Secrets Manager (gcp:// via the injected ADC). the baked image skips secret renders (MK_DRY_RUN_RENDER_SECRETS), so a fresh pod has no keys until this runs. reattach skips it (keys already on the overlay diff)
 #[why] --skip-remote-refs keeps it to the local configs specs (no workspace clone/pull); GCP_SA_KEY=1 restores the op://<->gcp:// discriminator, which 40-gcp-adc unsets after materializing ADC in the same login shell
+#[why] whitelist CHE_OTEL_ENDPOINT (set on the pod by session.yml -> sandbox-otelcol:4317) so che's exporter flushes the render's telemetry to the in-cluster collector, not che's baked localhost:4317 default (unreachable -> connection-refused). su - resets the env, so it must be named in -w to survive
 if [[ -n $session_created ]] {
-  $kc exec $SESSION -- env "GCP_SA_KEY=$gcp_sa_key" su -w GCP_SA_KEY - ko -c \
+  $kc exec $SESSION -- env "GCP_SA_KEY=$gcp_sa_key" su -w GCP_SA_KEY,CHE_OTEL_ENDPOINT - ko -c \
     'cd ~/projects/gitlab/konradodwrot/configs && GCP_SA_KEY=1 che render-templates --profiles cli/linux --skip-remote-refs'
 }
 
-#[why] runtime secret pass, mirrors the macos vm SendEnv flow: host tokens ride the exec into ko's login shell (su -w whitelists them), never baked or stored
-#[why] GCP_SA_KEY carries the SA key JSON; the pod login writes it to a file and points GOOGLE_APPLICATION_CREDENTIALS at it (see configs 00-local.zsh)
-#[why] OP_SERVICE_ACCOUNT_TOKEN is deliberately NOT forwarded: the pod resolves its secrets from GCP Secrets Manager (gcp:// via ADC), never 1password. glab (ln) authenticates from GITLAB_TOKEN, no op needed in the pod
+#[why] ONLY GCP_SA_KEY rides the exec: the SA key JSON becomes the pod's ADC (40-gcp-adc writes it to a file, points GOOGLE_APPLICATION_CREDENTIALS at it). the pod resolves every other secret at runtime from GCP Secrets Manager: ssh keys via the create-render above, the gitlab token via fn_auth_glab on first glab call. no op token, no gitlab token injected
 #[why] container runs as root (overlay mount); su drops into ko's login zsh
 #[why] su - resets the env; whitelist the pod's OTEL_* overrides too so claude (shell env > settings.json) and codex (otel SDK reads env) target the in-cluster collector, not the baked localhost default
-exec $kc exec -it $SESSION -- env "GITLAB_TOKEN=$gitlab_token" "GCP_SA_KEY=$gcp_sa_key" su -w GITLAB_TOKEN,GCP_SA_KEY,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_RESOURCE_ATTRIBUTES - ko
+exec $kc exec -it $SESSION -- env "GCP_SA_KEY=$gcp_sa_key" su -w GCP_SA_KEY,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_RESOURCE_ATTRIBUTES - ko
 ##[<] 🤖🤖🤖
