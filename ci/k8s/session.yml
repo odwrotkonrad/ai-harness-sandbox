@@ -20,8 +20,10 @@ spec:
       image: sandbox:local
       imagePullPolicy: Never
       #[why] override the baked localhost:4317 default: session telemetry (claude + codex, all grpc) targets the in-cluster collector, which forwards to the host otelcol; OTEL_RESOURCE_ATTRIBUTES stamps this session's identity on every signal so sessions are distinguishable from each other and (with the collector's deployment.environment=sandbox) from the host
+      #[why] CHE_OTEL_ENDPOINT is che's own knob (host:port, no scheme): che ignores OTEL_EXPORTER_OTLP_ENDPOINT, so without this che (incl. the bootstrap render) flushes to the baked localhost:4317 and errors connection-refused
       env:
         - {name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://sandbox-otelcol:4317"}
+        - {name: CHE_OTEL_ENDPOINT, value: "sandbox-otelcol:4317"}
         - {name: OTEL_RESOURCE_ATTRIBUTES, value: "session.name=${SESSION},service.namespace=sandbox"}
       #[why] home as overlay: image /home/ko is the shared read-only base (lowerdir), the shared PVC keeps only this session's diff under /mnt/home/<session>; no per-session PVC, no full copy of home
       #[why] privileged + root: mount(2) inside the container needs it; kubectl exec re-enters as ko via su

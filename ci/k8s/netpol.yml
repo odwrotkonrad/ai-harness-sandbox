@@ -39,4 +39,10 @@ spec:
       toPorts:
         - ports:
             - {port: "443", protocol: TCP}
+    #[why] git-over-ssh transport: gitlab.com only, port 22. separate from the 443 allowlist so ssh egress is scoped to gitlab, everything else stays HTTPS-only
+    - toFQDNs:
+        - {matchName: gitlab.com}
+      toPorts:
+        - ports:
+            - {port: "22", protocol: TCP}
 ##[<] 🤖🤖🤖
