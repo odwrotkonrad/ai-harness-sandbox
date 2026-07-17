@@ -20,6 +20,6 @@ if [[ -z $oci_dir ]] {
 (( $+commands[docker] )) || fn-exit-with 1 "${0:t}: docker not found"
 [[ -f $oci_dir/Makefile ]] || fn-exit-with 1 "${0:t}: ${oci_dir:-oci-images checkout} not found (set OCI_IMAGES_DIR)"
 
-make -C $oci_dir run-image-build-all
+make -C $oci_dir image-build-all
 docker tag dev-sandbox:local sandbox:local
 ##[<] 🤖🤖

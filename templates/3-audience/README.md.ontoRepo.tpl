@@ -14,10 +14,10 @@ Local claude session sandbox.
 
 The pod image is `registry.gitlab.com/konradodwrot/infra/oci-images/dev-sandbox`
 (config-baked, no secrets; amd64 on bare tags, arm64 with an `-arm64` suffix),
-built and published by `infra/oci-images`. `run-image-pull` pulls it
+built and published by `infra/oci-images`. `image-pull` pulls it
 (`DEV_SANDBOX_TAG`, default `latest`, arch suffix auto-appended on arm64 hosts)
-and retags it `sandbox:local`; `run-registry-up` starts a host-local
-`registry:2` (`kind-registry`, `127.0.0.1:5001`) and `run-image-load` tags
+and retags it `sandbox:local`; `registry-up` starts a host-local
+`registry:2` (`kind-registry`, `127.0.0.1:5001`) and `image-load` tags
 `sandbox:local` as `localhost:5001/sandbox:local` and pushes it there. A
 containerd mirror patch in `kind.yml` maps `localhost:5001` to
 `kind-registry:5000` in-network, so nodes pull from the same registry and
@@ -29,7 +29,7 @@ off the external network.
 ## Use
 
 ```sh
-$ make run-all
+$ make all
 $ make session-create
 $ make session-create SESSION=s-mytopic
 $ make session-attach
@@ -37,7 +37,7 @@ $ make session-attach SESSION=s-mytopic
 $ make session-ls
 $ make session-stop SESSION=s-mytopic
 $ make session-rm SESSION=s-mytopic
-$ make run-cluster-down
+$ make cluster-down
 ```
 
 A session is a named pod whose `/home/ko` is an overlayfs: the image's baked
@@ -58,11 +58,11 @@ listed — raw IPs, unknown domains, and all plain HTTP on port 80 — is droppe
 in-kernel; there is no port-80 rule anywhere, so HTTP is denied even for
 allowlisted domains.
 
-Cilium images pull from quay.io at install time (`run-cilium-up`), so cluster
+Cilium images pull from quay.io at install time (`cilium-up`), so cluster
 bootstrap needs network (it already does, to pull the dev-sandbox image).
 
 **Extend the allowlist:** add one `matchName`/`matchPattern` line under
-`toFQDNs` in the `sandbox-egress` policy, then `make run-netpol-up`.
+`toFQDNs` in the `sandbox-egress` policy, then `make netpol-up`.
 
 **Observe egress:** Hubble runs with OpenMetrics on (`:9965` on each Cilium
 agent). The in-cluster otel collector scrapes those `hubble_*` flow/drop/dns

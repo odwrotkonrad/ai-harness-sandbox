@@ -75,22 +75,22 @@ Each convention dir carries a runnable `example/`. This repo itself follows all 
 
 ### Wrappers:
 
-`run-all`: `run-image-pull -> run-registry-up -> run-cluster-up -> run-cilium-up -> run-netpol-up -> run-image-load -> run-otelcol-up -> session-create` remote flow: pull the published dev-sandbox image from the GitLab registry, registry up, cluster up, cilium + egress policy, push to local registry, open a session shell
-`run-all-build`: `run-image-build -> run-registry-up -> run-cluster-up -> run-cilium-up -> run-netpol-up -> run-image-load -> run-otelcol-up -> session-create` default local flow (bare `make`): build ci-linux + dev-sandbox in oci-images, registry up, cluster up, cilium + egress policy, push to local registry, open a session shell; no GitLab registry
-`run-all-scratch`: `run-prune -> run-all-build` run-all-build from scratch: delete the cluster and prune local images first
+`all`: `image-pull -> registry-up -> cluster-up -> cilium-up -> netpol-up -> image-load -> otelcol-up -> session-create` remote flow: pull the published dev-sandbox image from the GitLab registry, registry up, cluster up, cilium + egress policy, push to local registry, open a session shell
+`all-build`: `image-build -> registry-up -> cluster-up -> cilium-up -> netpol-up -> image-load -> otelcol-up -> session-create` default local flow (bare `make`): build ci-linux + dev-sandbox in oci-images, registry up, cluster up, cilium + egress policy, push to local registry, open a session shell; no GitLab registry
+`all-scratch`: `prune -> all-build` all-build from scratch: delete the cluster and prune local images first
 
 ### Sandbox:
 
-`run-image-pull` pull the published dev-sandbox image (DEV_SANDBOX_TAG) and retag it sandbox:local
-`run-image-build` build ci-linux + dev-sandbox locally (make in OCI_IMAGES_DIR) and retag sandbox:local
-`run-prune` delete the kind cluster and prune the local sandbox images (sandbox/dev-sandbox/ci-linux :local, dangling, build cache)
-`run-registry-up` start the host-local registry (kind-registry, 127.0.0.1:5001) and join it to the kind network (no-op when running); must run before run-cluster-up so the containerd mirror patch resolves
-`run-cluster-up` create the single-node kind cluster `sandbox` (no-op when up)
-`run-cluster-down` delete the kind cluster `sandbox` (sessions and PVCs go with it)
-`run-cilium-up` install cilium as the CNI with hubble flow metrics (openmetrics :9965), wait ready (no-op when already ok); needs the cilium CLI on PATH
-`run-netpol-up` apply the default-deny + FQDN allowlist egress policy (ci/k8s/netpol.yml) to the session pods
-`run-image-load` tag sandbox:local as localhost:5001/sandbox:local and push it to the host registry (only changed layers upload); session pods pull it via the containerd mirror
-`run-otelcol-up` deploy the in-cluster otel collector (forwards session telemetry to the host otelcol) and wait for rollout
+`image-pull` pull the published dev-sandbox image (DEV_SANDBOX_TAG) and retag it sandbox:local
+`image-build` build ci-linux + dev-sandbox locally (make in OCI_IMAGES_DIR) and retag sandbox:local
+`prune` delete the kind cluster and prune the local sandbox images (sandbox/dev-sandbox/ci-linux :local, dangling, build cache)
+`registry-up` start the host-local registry (kind-registry, 127.0.0.1:5001) and join it to the kind network (no-op when running); must run before cluster-up so the containerd mirror patch resolves
+`cluster-up` create the single-node kind cluster `sandbox` (no-op when up)
+`cluster-down` delete the kind cluster `sandbox` (sessions and PVCs go with it)
+`cilium-up` install cilium as the CNI with hubble flow metrics (openmetrics :9965), wait ready (no-op when already ok); needs the cilium CLI on PATH
+`netpol-up` apply the default-deny + FQDN allowlist egress policy (ci/k8s/netpol.yml) to the session pods
+`image-load` tag sandbox:local as localhost:5001/sandbox:local and push it to the host registry (only changed layers upload); session pods pull it via the containerd mirror
+`otelcol-up` deploy the in-cluster otel collector (forwards session telemetry to the host otelcol) and wait for rollout
 `session-create` create a new SESSION pod (overlay home diff on the shared PVC), render its GCP secrets, and exec a login zsh; exit leaves it running. SESSION unset -> s-<datetime>
 `session-attach` attach a login zsh to an existing session; SESSION unset -> most recent running session
 `session-stop` delete the SESSION pod, keep its home diff (session survives)
@@ -99,8 +99,8 @@ Each convention dir carries a runnable `example/`. This repo itself follows all 
 
 ### CI:
 
-`run-repo-ci-prepare-hooks` install lefthook git hooks
-`run-repo-ci-precommit-all`: `run-repo-ci-prepare-hooks` run pre-commit hooks over all files (not just staged)
+`repo-ci-prepare-hooks` install lefthook git hooks
+`repo-ci-precommit-all`: `repo-ci-prepare-hooks` run pre-commit hooks over all files (not just staged)
 
 ## Directory Tree
 
