@@ -14,6 +14,6 @@ validate-pre-commit-all:
   needs: []
   image: $CI_IMAGE
   script:
-    - make run-repo-ci-precommit-all
+    - make repo-ci-precommit-all
     - git diff --exit-code HEAD
 ##[<] 🤖🤖

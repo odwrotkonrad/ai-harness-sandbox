@@ -13,6 +13,6 @@ typeset repo_root=$(git -C ${0:A:h} rev-parse --show-toplevel)
 kind get clusters 2>/dev/null | grep -qx sandbox \
   || kind create cluster --name sandbox --config $repo_root/ci/k8s/kind.yml
 
-#[why] connect the registry now that the kind network exists: run-registry-up runs before cluster-up, so its own connect no-ops when the network is absent; nodes need kind-registry on the network to resolve the mirror endpoint. tolerate already-connected and a missing registry
+#[why] connect the registry now that the kind network exists: registry-up runs before cluster-up, so its own connect no-ops when the network is absent; nodes need kind-registry on the network to resolve the mirror endpoint. tolerate already-connected and a missing registry
 docker network connect kind kind-registry 2>/dev/null || true
 ##[<] 🤖🤖
