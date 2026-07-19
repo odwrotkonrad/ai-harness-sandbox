@@ -17,7 +17,7 @@ ontoRepo:
               - {path: AGENTS.md, options: {renderReferencedFiles: true}}
 
 claude-agents:
-  options: {autoDiscover: true, execIf: ['builtin:isVirt']}
+  options: {autoDiscover: true, runIf: ['builtin:isVirt']}
   include:
     renderTemplates:
       - ctx: {repo: Sandbox}
