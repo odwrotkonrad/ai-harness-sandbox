@@ -3,6 +3,7 @@ assets
   data
   docs-agents
 ci
+  docker
   k8s
   zsh
     scripts

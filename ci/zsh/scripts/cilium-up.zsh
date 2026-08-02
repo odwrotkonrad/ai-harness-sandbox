@@ -5,7 +5,7 @@ setopt errexit pipefail
 autoload -Uz fn-exit-with
 
 ##[>] 🤖🤖🤖
-#[why] pin the dataplane version (mirrors cluster-up hardcoding the cluster name `sandbox`): bare `cilium install` takes whatever the local CLI defaults to, so two hosts or the same host months apart get different Cilium; this keeps the CNI reproducible / offline-parity. cluster-level, so it lives here, not in oci-images tool-versions.env (pod-image tools)
+#[why] pin the dataplane version (mirrors cluster-up hardcoding the cluster name `sandbox`): bare `cilium install` takes whatever the local CLI defaults to, so two hosts or the same host months apart get different Cilium; this keeps the CNI reproducible / offline-parity. cluster-level, so it lives here, not with the pod-image tools in ci/docker
 CILIUM_VERSION=1.19.5
 
 (( $+commands[cilium] )) || fn-exit-with 1 "${0:t}: cilium CLI not found; install it and add to PATH: https://docs.cilium.io/en/stable/gettingstarted/k8s-install-default/#install-the-cilium-cli"

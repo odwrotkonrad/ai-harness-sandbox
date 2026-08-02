@@ -6,20 +6,19 @@ autoload -Uz fn-exit-with
 
 ##[>] 🤖🤖
 typeset repo_root=$(git -C ${0:A:h} rev-parse --show-toplevel)
-#[why] oci-images lives in the konradodwrot group tree, not a restricted-group sibling: try the sibling first, then the workspace-root konradodwrot path; OCI_IMAGES_DIR overrides both
-typeset -a oci_candidates=(
-  ${repo_root:h}/infra/oci-images
-  ${repo_root:h:h}/konradodwrot/infra/oci-images
-)
-typeset oci_dir=$OCI_IMAGES_DIR
-#[why] the Makefile exports OCI_IMAGES_DIR unconditionally, so it exists but is empty when unset: test emptiness, not existence
-if [[ -z $oci_dir ]] {
-  for c in $oci_candidates; { [[ -f $c/Makefile ]] && { oci_dir=$c; break } }
-}
 
 (( $+commands[docker] )) || fn-exit-with 1 "${0:t}: docker not found"
-[[ -f $oci_dir/Makefile ]] || fn-exit-with 1 "${0:t}: ${oci_dir:-oci-images checkout} not found (set OCI_IMAGES_DIR)"
 
-make -C $oci_dir image-build-all
-docker tag dev-sandbox:local sandbox:local
+#[why] latest commit touching tools -> CONFIGS_REF: busts the clone + che run layer only when the sourced configs tool profiles themselves changed, not on every configs push
+typeset configs_ref="$(curl -fsS 'https://gitlab.com/api/v4/projects/konradodwrot%2Fconfigs/repository/commits?path=tools&per_page=1' | sed -n 's/.*"id":"\([0-9a-f]*\)".*/\1/p')"
+
+#[why] etag of the latest che tarball -> CHE_REF: busts the che layer only when che re-published (mirrors the CI jobs)
+typeset che_ref=$(curl -fsSI "https://gitlab.com/api/v4/projects/konradodwrot%2Fgo-modules/packages/generic/che/latest/che_latest_linux_$(uname -m | sed 's/aarch64\|arm64/arm64/;s/x86_64/amd64/').tar.gz" | tr -d '\r' | awk 'tolower($1)=="etag:"{print $2}')
+
+docker build \
+  --file $repo_root/ci/docker/Dockerfile \
+  --build-arg CHE_REF=${che_ref:-latest} \
+  --build-arg CONFIGS_REF=$configs_ref \
+  --tag sandbox:local \
+  $repo_root
 ##[<] 🤖🤖

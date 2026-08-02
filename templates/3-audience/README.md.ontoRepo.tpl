@@ -12,11 +12,13 @@ Local claude session sandbox.
 - `ci/k8s/otelcol.yml` — in-cluster otel collector; forwards session telemetry to the host otelcol and scrapes Hubble flow metrics into the same pipe.
 - `ci/zsh/scripts/` — zsh wrappers behind the Makefile targets.
 
-The pod image is `registry.gitlab.com/konradodwrot/infra/oci-images/dev-sandbox`
-(config-baked, no secrets; amd64 on bare tags, arm64 with an `-arm64` suffix),
-built and published by `infra/oci-images`. `image-pull` pulls it
-(`DEV_SANDBOX_TAG`, default `latest`, arch suffix auto-appended on arm64 hosts)
-and retags it `sandbox:local`; `registry-up` starts a host-local
+The pod image is `registry.gitlab.com/konradodwrot-restricted/sandbox/sandbox`
+(config-baked via the `sandbox-build` profile in `ci/docker/che.yml`, no secrets; amd64 on
+bare tags, arm64 with an `-arm64` suffix), built from `ci/docker/Dockerfile`
+and published by this project's own CI to its private registry. `image-build`
+builds it locally as `sandbox:local`; `image-pull` pulls the published one
+(`SANDBOX_TAG`, default `latest`, arch suffix auto-appended on arm64 hosts,
+needs a prior `docker login registry.gitlab.com`) and retags it `sandbox:local`; `registry-up` starts a host-local
 `registry:2` (`kind-registry`, `127.0.0.1:5001`) and `image-load` tags
 `sandbox:local` as `localhost:5001/sandbox:local` and pushes it there. A
 containerd mirror patch in `kind.yml` maps `localhost:5001` to
@@ -59,7 +61,7 @@ in-kernel; there is no port-80 rule anywhere, so HTTP is denied even for
 allowlisted domains.
 
 Cilium images pull from quay.io at install time (`cilium-up`), so cluster
-bootstrap needs network (it already does, to pull the dev-sandbox image).
+bootstrap needs network (it already does, to build or pull the sandbox image).
 
 **Extend the allowlist:** add one `matchName`/`matchPattern` line under
 `toFQDNs` in the `sandbox-egress` policy, then `make netpol-up`.
