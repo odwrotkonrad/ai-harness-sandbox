@@ -20,7 +20,7 @@ $kc get pod $SESSION >/dev/null 2>&1 || fn-exit-with 1 "${0:t}: session $SESSION
 #[why] warn-only freshness check: the pod's manifest digest survives the pull -> retag -> local-registry push chain unchanged, so it compares directly against the published tag's digest; a mismatch means a newer image was published (or the pod runs a local dev build). best-effort: no docker/yq/registry auth -> note and attach anyway
 typeset tag=${SANDBOX_TAG:-latest}
 [[ $(uname -m) == (arm64|aarch64) ]] && tag+=-arm64
-typeset image=registry.gitlab.com/konradodwrot/restricted/sandbox/sandbox:$tag
+typeset image=registry.gitlab.com/konradodwrot/sandbox/sandbox:$tag
 typeset pod_digest=$($kc get pod $SESSION -o jsonpath='{.status.containerStatuses[0].imageID}' 2>/dev/null)
 pod_digest=${pod_digest##*@}
 typeset remote_digest=''
