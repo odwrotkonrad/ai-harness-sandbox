@@ -1,10 +1,10 @@
 ##[>] 🤖🤖
 FROM debian:bookworm-slim
 
-#[why] only what the profile runs need: git (configs clone), curl + ca-certificates (che tarball, profile install scripts), sudo (root-owned dests + apt installs as the sandbox user), perl (shasum in the rg install script), procps (homebrew installer requirement), python3 (gcloud install.sh + runtime interpreter), jq (gitlab/projects clone script at pod creation), ruby (llm/codex prerequisite); zsh, rg and brew are NOT preinstalled, the zsh/base profile's own scripts install them
+#[why] only what the profile runs need: git (configs clone), curl + ca-certificates (che tarball, profile install scripts), sudo (root-owned dests + apt installs as the sandbox user), perl (shasum in the rg install script), procps (homebrew installer requirement), python3 (gcloud install.sh + runtime interpreter), jq (gitlab/projects clone script at pod creation); zsh, rg and brew are NOT preinstalled, the zsh/base profile's own scripts install them
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      git curl ca-certificates sudo perl procps python3 jq ruby \
+      git curl ca-certificates sudo perl procps python3 jq \
  && rm -rf /var/lib/apt/lists/*
 
 #[why] prebuilt che tarball, not go install: skip che's slow CGO build (tree-sitter + 1Password sdk); CHE_REF busts this layer only when the latest che tarball changed (CI passes its etag)

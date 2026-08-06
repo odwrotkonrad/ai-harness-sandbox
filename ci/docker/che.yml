@@ -9,6 +9,7 @@ sandbox-build:
       - source: "~/projects/gitlab/konradodwrot/configs/profiles/git/che.yml::git"
       - source: "~/projects/gitlab/konradodwrot/configs/profiles/llm/base/che.yml::llm/base"
       - source: "~/projects/gitlab/konradodwrot/configs/profiles/llm/claude/che.yml::llm/claude"
+      - source: "~/projects/gitlab/konradodwrot/configs/profiles/dev/ruby/che.yml::dev/ruby"
       - source: "~/projects/gitlab/konradodwrot/configs/profiles/llm/codex/che.yml::llm/codex"
       - source: "~/projects/gitlab/konradodwrot/configs/profiles/cloud/gcp/che.yml::cloud/gcp/install"
       - source: "~/projects/gitlab/konradodwrot/configs/profiles/gitlab/glab/che.yml::gitlab/glab"
