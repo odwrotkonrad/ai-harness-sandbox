@@ -12,7 +12,7 @@ Local claude session sandbox.
 - `ci/k8s/otelcol.yml` — in-cluster otel collector; forwards session telemetry to the host otelcol and scrapes Hubble flow metrics into the same pipe.
 - `ci/zsh/scripts/` — zsh wrappers behind the Makefile targets.
 
-The pod image is `registry.gitlab.com/konradodwrot-restricted/sandbox/sandbox`
+The pod image is `registry.gitlab.com/konradodwrot/sandbox/sandbox`
 (config-baked via the `sandbox-build` profile in `ci/docker/che.yml`, no secrets; amd64 on
 bare tags, arm64 with an `-arm64` suffix), built from `ci/docker/Dockerfile`
 and published by this project's own CI to its private registry. `image-pull`

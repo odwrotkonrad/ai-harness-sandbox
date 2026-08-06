@@ -13,7 +13,7 @@ profile (defined in
 `ci/docker/che.yml`, composing configs tool profiles from that clone: zsh,
 git, claude, codex, gcloud, glab, ssh config; secret-free by construction),
 CI publishes it per-arch to this project's private registry
-(`registry.gitlab.com/konradodwrot-restricted/sandbox/sandbox`, amd64 bare
+(`registry.gitlab.com/konradodwrot/sandbox/sandbox`, amd64 bare
 tags, arm64 `-arm64` suffixed). The host pulls the newest published image by
 default (`make`, bare; needs `docker login`; `session-create` re-checks and
 refreshes a stale pull on every run) or builds it locally for sandbox dev
