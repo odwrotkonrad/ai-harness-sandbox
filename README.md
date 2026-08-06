@@ -9,13 +9,28 @@ Local claude session sandbox.
 
 Local claude session sandbox: a two-node kind cluster (`sandbox`, one
 control-plane node for the management plane, one worker node for the data
-plane) running persistent per-session pods on the worker. The pod image is the
-published config-baked `dev-sandbox` image from `infra/oci-images`
-(`registry.gitlab.com/konradodwrot/infra/oci-images/dev-sandbox`), pulled and
-retagged `sandbox:local`, then pushed to a host-local `registry:2`
+plane) running persistent per-session pods on the worker. This repo owns the
+sandbox image and its config composition: `ci/docker/` bakes a
+`debian:bookworm-slim` base with che, a shallow clone of the public `configs`
+repo at its standard workspace path (`~/projects/gitlab/konradodwrot/configs`,
+kept synced as a normal workspace repo from then on), and a `sandbox-build`
+profile (defined in
+`ci/docker/che.yml`, composing configs tool profiles from that clone: zsh,
+git, claude, codex, gcloud, glab, ssh config; secret-free by construction),
+CI publishes it per-arch to this project's private registry
+(`registry.gitlab.com/konradodwrot-restricted/sandbox/sandbox`, amd64 bare
+tags, arm64 `-arm64` suffixed). The host pulls the newest published image by
+default (`make`, bare; needs `docker login`; `session-create` re-checks and
+refreshes a stale pull on every run) or builds it locally for sandbox dev
+(`make all-build`), tags it `sandbox:local`, then pushes it to a host-local
+`registry:2`
 (`kind-registry`, `127.0.0.1:5001`) that a containerd mirror patch maps to
 `kind-registry:5000` in-network, so nodes pull it and iterative builds transfer
-only changed layers by digest instead of re-loading the whole image tar. Session
+only changed layers by digest instead of re-loading the whole image tar. At pod
+creation, `session-create` refreshes the configs checkout (skipped when dirty)
+and runs the `sandbox-runtime` profile in the pod: ADC auth check, ssh keypair
+rendered from GCP Secrets Manager, workspace clone + repo index — every secret
+enters at runtime, none is baked. Session
 home is an
 overlayfs: the image's baked `/home/ko` is the shared read-only base, one
 shared PVC keeps each session's writable diff, so session state survives pod
@@ -25,22 +40,25 @@ allowlist, so a pod reaches only allowlisted domains over HTTPS and everything
 else (raw IPs, unknown domains, plain HTTP on port 80) drops in-kernel. Hubble
 exports flow/drop metrics that ride the existing sandbox→host otelcol pipe into
 the host Prometheus/Grafana, so egress (allowed vs denied, top-denied FQDN,
-per-source) is queryable there. This repo owns only the runtime: kind/k8s config
-plus session utils and commands.
+per-source) is queryable there.
 
 ### Why It Exists
 
-Claude sessions need an isolated shell carrying the full personal config, one
-container per session, without touching the host. The config-baked image is
-built and published by `infra/oci-images` (public configs, secrets skipped),
-so this repo pulls a ready image instead of building one; kind gives cheap
-named, persistent, explicitly deleted session pods.
+Claude sessions need an isolated shell carrying the personal config, one
+container per session, without touching the host. The image must bake no
+secrets, so the config splits into a secret-free `sandbox-build` bake and a
+`sandbox-runtime` pod-creation profile, both composed in this repo from
+`configs` tool profiles; owning image and composition here keeps the whole
+sandbox lifecycle (bake, publish, cluster, sessions) in the one repo that also
+holds its restricted identity. kind gives cheap named, persistent, explicitly
+deleted session pods.
 
 ### Goals
 
-- One command from image to shell: pull, cluster up, load, session exec.
-- No image building here: the published dev-sandbox image is the pod image.
-- Full personal config inside the pod: zsh, che, claude state, same as host cli/linux.
+- One repo owns the sandbox end to end: profile composition, image bake, registry publish, cluster, sessions.
+- One command from image to shell: build or pull, cluster up, load, session exec.
+- No secrets baked: the image bakes the secret-free `sandbox-build` profile; `sandbox-runtime` injects identity at pod creation (ADC check, ssh keys, workspace clone), all via the injected GCP SA key.
+- Both arches published from CI: amd64 bare tags, arm64 `-arm64` suffixed; rebuilt on configs main and che releases via cross-project triggers.
 - Persistent named sessions: home diff survives pod restart, deleted only explicitly.
 - Space-efficient sessions: one shared home base (image layer), per-session overlay diffs on one PVC.
 - Offline-friendly: image pushed to a host-local registry, nodes pull it in-network via the containerd mirror (`imagePullPolicy: Always`, host-local so no external network), no pull secrets.
@@ -55,11 +73,17 @@ named, persistent, explicitly deleted session pods.
 - `ci/k8s/otelcol.yml` — in-cluster otel collector; forwards session telemetry to the host otelcol and scrapes Hubble flow metrics into the same pipe.
 - `ci/zsh/scripts/` — zsh wrappers behind the Makefile targets.
 
-The pod image is `registry.gitlab.com/konradodwrot/infra/oci-images/dev-sandbox`
-(config-baked, no secrets; amd64 on bare tags, arm64 with an `-arm64` suffix),
-built and published by `infra/oci-images`. `image-pull` pulls it
-(`DEV_SANDBOX_TAG`, default `latest`, arch suffix auto-appended on arm64 hosts)
-and retags it `sandbox:local`; `registry-up` starts a host-local
+The pod image is `registry.gitlab.com/konradodwrot-restricted/sandbox/sandbox`
+(config-baked via the `sandbox-build` profile in `ci/docker/che.yml`, no secrets; amd64 on
+bare tags, arm64 with an `-arm64` suffix), built from `ci/docker/Dockerfile`
+and published by this project's own CI to its private registry. `image-pull`
+(the default flow) pulls the published one (`SANDBOX_TAG`, default `latest`,
+arch suffix auto-appended on arm64 hosts, needs a prior
+`docker login registry.gitlab.com`) and retags it `sandbox:local`;
+`image-build` (sandbox dev) builds it locally instead. `session-create`
+re-checks the published digest on every run and refreshes a stale or missing
+`sandbox:local` (local dev builds are kept); `session-attach` warns when the
+pod runs an outdated image. `registry-up` starts a host-local
 `registry:2` (`kind-registry`, `127.0.0.1:5001`) and `image-load` tags
 `sandbox:local` as `localhost:5001/sandbox:local` and pushes it there. A
 containerd mirror patch in `kind.yml` maps `localhost:5001` to
@@ -72,7 +96,7 @@ off the external network.
 ## Use
 
 ```sh
-$ make all
+$ make
 $ make session-create
 $ make session-create SESSION=s-mytopic
 $ make session-attach
@@ -102,7 +126,7 @@ in-kernel; there is no port-80 rule anywhere, so HTTP is denied even for
 allowlisted domains.
 
 Cilium images pull from quay.io at install time (`cilium-up`), so cluster
-bootstrap needs network (it already does, to pull the dev-sandbox image).
+bootstrap needs network (it already does, to build or pull the sandbox image).
 
 **Extend the allowlist:** add one `matchName`/`matchPattern` line under
 `toFQDNs` in the `sandbox-egress` policy, then `make netpol-up`.

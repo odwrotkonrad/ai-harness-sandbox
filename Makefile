@@ -9,16 +9,13 @@ COMMANDS := render-templates repo-ci-prepare-hooks repo-ci-precommit-all image-p
 
 .PHONY: $(WRAPPERS) $(COMMANDS)
 
-#[why] default to the local-build flow: bare `make` never touches the GitLab registry (all's image-pull does); remote pull stays an explicit `make all`
-.DEFAULT_GOAL := all-build
+#[why] default to the standard remote flow: bare `make` pulls the newest published image; the local build stays an explicit `make all-build` for sandbox dev
+.DEFAULT_GOAL := all
 
 ##[>] Environment Variables [genai-include]
-#[what] dev-sandbox image tag to pull, unset -> latest
+#[what] published sandbox image tag to pull, unset -> latest
 #[vals] tag
-export DEV_SANDBOX_TAG
-#[what] oci-images checkout the local image build runs in, unset -> sibling ../infra/oci-images, else ../../konradodwrot/infra/oci-images
-#[vals] path
-export OCI_IMAGES_DIR
+export SANDBOX_TAG
 #[what] session name (pod + pvc); required by stop/rm, unset on session-create -> s-<datetime>, unset on session-attach -> most recent
 #[vals] name
 export SESSION
@@ -31,10 +28,10 @@ render-templates:
 ##[<] Docs
 
 ##[>] Wrappers [genai-include]
-#[what] remote flow: pull the published dev-sandbox image from the GitLab registry, registry up, cluster up, cilium + egress policy, push to local registry, open a session shell
+#[what] default flow (bare `make`): pull the newest published sandbox image from this project's GitLab registry (private: needs a prior `docker login registry.gitlab.com`), registry up, cluster up, cilium + egress policy, push to local registry, open a session shell
 all: image-pull registry-up cluster-up cilium-up netpol-up image-load otelcol-up session-create
 
-#[what] default local flow (bare `make`): build ci-linux + dev-sandbox in oci-images, registry up, cluster up, cilium + egress policy, push to local registry, open a session shell; no GitLab registry
+#[what] sandbox-dev flow: build the sandbox image locally from ci/docker/Dockerfile instead of pulling the published one, registry up, cluster up, cilium + egress policy, push to local registry, open a session shell; no GitLab registry
 all-build: image-build registry-up cluster-up cilium-up netpol-up image-load otelcol-up session-create
 
 #[what] all-build from scratch: delete the cluster and prune local images first
@@ -42,15 +39,15 @@ all-scratch: prune all-build
 ##[<] Wrappers
 
 ##[>] Sandbox [genai-include]
-#[what] pull the published dev-sandbox image (DEV_SANDBOX_TAG) and retag it sandbox:local
+#[what] pull the published sandbox image (SANDBOX_TAG) from the private project registry and retag it sandbox:local
 image-pull:
 	@image-pull.zsh
 
-#[what] build ci-linux + dev-sandbox locally (make in OCI_IMAGES_DIR) and retag sandbox:local
+#[what] build sandbox:local from ci/docker/Dockerfile (secret-free sandbox-build bake of configs main)
 image-build:
 	@image-build.zsh
 
-#[what] delete the kind cluster and prune the local sandbox images (sandbox/dev-sandbox/ci-linux :local, dangling, build cache)
+#[what] delete the kind cluster and prune the local sandbox image (sandbox:local, dangling, build cache)
 prune:
 	@prune.zsh
 
@@ -82,7 +79,7 @@ image-load:
 otelcol-up:
 	@otelcol-up.zsh
 
-#[what] create a new SESSION pod (overlay home diff on the shared PVC), render its GCP secrets, and exec a login zsh; exit leaves it running. SESSION unset -> s-<datetime>
+#[what] create a new SESSION pod (overlay home diff on the shared PVC): refresh sandbox:local to the newest published image first (pull + load when stale or missing; local dev builds are kept), run the sandbox-runtime profile (auth check, ssh keys, workspace clone + index), and exec a login zsh; exit leaves it running. SESSION unset -> s-<datetime>
 session-create:
 	@session-create.zsh
 

@@ -11,7 +11,7 @@ autoload -Uz fn-exit-with
 #[why] cluster first: its node containers hold the loaded image copies
 kind get clusters 2>/dev/null | grep -qx sandbox && kind delete cluster --name sandbox
 
-docker rmi -f sandbox:local dev-sandbox:local ci-linux:local 2>/dev/null || true
+docker rmi -f sandbox:local 2>/dev/null || true
 docker image prune -f
 docker builder prune -f
 ##[<] 🤖🤖
