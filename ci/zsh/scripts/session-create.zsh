@@ -20,12 +20,12 @@ fi
 #[why] always create from the newest published image: compare sandbox:local's registry digest against the published tag's; pull + load when sandbox:local is missing or a stale pull. a sandbox:local without a registry RepoDigest is a local dev build (image-build): kept, noted. remote unreachable (no docker login / offline) -> note and use what is loaded
 typeset tag=${SANDBOX_TAG:-latest}
 [[ $(uname -m) == (arm64|aarch64) ]] && tag+=-arm64
-typeset image=registry.gitlab.com/konradodwrot-restricted/sandbox/sandbox:$tag
+typeset image=registry.gitlab.com/konradodwrot/restricted/sandbox/sandbox:$tag
 typeset remote_digest=''
 if (( $+commands[docker] )) {
   remote_digest=$(docker manifest inspect -v $image 2>/dev/null | yq -p json '.Descriptor.digest' 2>/dev/null) || remote_digest=''
 }
-typeset local_registry_digest=$(docker image inspect sandbox:local --format '{{join .RepoDigests "\n"}}' 2>/dev/null | sed -n 's#^registry.gitlab.com/konradodwrot-restricted/sandbox/sandbox@##p' | head -1)
+typeset local_registry_digest=$(docker image inspect sandbox:local --format '{{join .RepoDigests "\n"}}' 2>/dev/null | sed -n 's#^registry.gitlab.com/konradodwrot/restricted/sandbox/sandbox@##p' | head -1)
 if [[ -z $remote_digest || $remote_digest == null ]] {
   print -r -- "${0:t}: could not check the newest published $image; using the loaded sandbox:local"
 } elif { ! docker image inspect sandbox:local >/dev/null 2>&1 } {

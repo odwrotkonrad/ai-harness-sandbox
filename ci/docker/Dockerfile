@@ -17,7 +17,7 @@ RUN set -eux; \
       arm64) plat=linux_arm64 ;; \
       *) echo "unsupported arch: $arch" >&2; exit 1 ;; \
     esac; \
-    che_base="https://gitlab.com/api/v4/projects/konradodwrot%2Fgo-modules/packages/generic/che/latest"; \
+    che_base="https://gitlab.com/api/v4/projects/konradodwrot%2Funrestricted%2Fgo-modules/packages/generic/che/latest"; \
     curl -fsSL --connect-timeout 30 --retry 5 --retry-delay 2 --retry-all-errors -o /tmp/che.tar.gz "${che_base}/che_latest_${plat}.tar.gz"; \
     tar -xz -C /usr/local/bin -f /tmp/che.tar.gz che render-tpl render-repo-group-index; \
     rm /tmp/che.tar.gz
@@ -39,7 +39,7 @@ COPY --chown=$SANDBOX_USER ci/docker/che.yml /home/$SANDBOX_USER/.sandbox-che/ch
 ARG CONFIGS_REF=main
 RUN set -eux; \
     : "${CONFIGS_REF}"; \
-    git clone --quiet --depth 1 --single-branch https://gitlab.com/konradodwrot/configs.git /home/$SANDBOX_USER/projects/gitlab/konradodwrot/configs; \
+    git clone --quiet --depth 1 --single-branch https://gitlab.com/konradodwrot/unrestricted/configs.git /home/$SANDBOX_USER/projects/gitlab/konradodwrot/configs; \
     git -C /home/$SANDBOX_USER/.sandbox-che init --quiet; \
     git -C /home/$SANDBOX_USER/.sandbox-che add che.yml; \
     cd /home/$SANDBOX_USER/.sandbox-che; \
