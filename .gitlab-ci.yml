@@ -58,7 +58,7 @@ build-sandbox-image-amd64:
 
 build-sandbox-image-arm64:
   extends: .build-image
-  tags: [saas-linux-medium-arm64]
+  tags: [saas-linux-small-arm64]
   needs: []
   rules:
     - if: $CI_MERGE_REQUEST_DRAFT == "true"
