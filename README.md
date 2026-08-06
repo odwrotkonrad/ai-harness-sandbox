@@ -18,7 +18,7 @@ profile (defined in
 `ci/docker/che.yml`, composing configs tool profiles from that clone: zsh,
 git, claude, codex, gcloud, glab, ssh config; secret-free by construction),
 CI publishes it per-arch to this project's private registry
-(`registry.gitlab.com/konradodwrot/sandbox/sandbox`, amd64 bare
+(`registry.gitlab.com/konradodwrot/infra/sandbox/sandbox`, amd64 bare
 tags, arm64 `-arm64` suffixed). The host pulls the newest published image by
 default (`make`, bare; needs `docker login`; `session-create` re-checks and
 refreshes a stale pull on every run) or builds it locally for sandbox dev
@@ -73,7 +73,7 @@ deleted session pods.
 - `ci/k8s/otelcol.yml` — in-cluster otel collector; forwards session telemetry to the host otelcol and scrapes Hubble flow metrics into the same pipe.
 - `ci/zsh/scripts/` — zsh wrappers behind the Makefile targets.
 
-The pod image is `registry.gitlab.com/konradodwrot/sandbox/sandbox`
+The pod image is `registry.gitlab.com/konradodwrot/infra/sandbox/sandbox`
 (config-baked via the `sandbox-build` profile in `ci/docker/che.yml`, no secrets; amd64 on
 bare tags, arm64 with an `-arm64` suffix), built from `ci/docker/Dockerfile`
 and published by this project's own CI to its private registry. `image-pull`
