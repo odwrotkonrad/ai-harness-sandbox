@@ -60,6 +60,12 @@ build-sandbox-image-arm64:
   extends: .build-image
   tags: [saas-linux-medium-arm64]
   needs: []
+  rules:
+    - if: $CI_MERGE_REQUEST_DRAFT == "true"
+      when: never
+    - if: $BUILD_SANDBOX_IMAGE
+    - when: manual
+      allow_failure: true
   script:
     - docker buildx build
         --file "$CI_PROJECT_DIR/ci/docker/Dockerfile"
