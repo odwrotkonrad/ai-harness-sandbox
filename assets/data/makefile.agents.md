@@ -12,8 +12,8 @@
 
 ### Wrappers:
 
-`all`: `image-pull -> registry-up -> cluster-up -> cilium-up -> netpol-up -> image-load -> otelcol-up -> session-create` remote flow: pull the published sandbox image from this project's GitLab registry (private: needs a prior `docker login registry.gitlab.com`), registry up, cluster up, cilium + egress policy, push to local registry, open a session shell
-`all-build`: `image-build -> registry-up -> cluster-up -> cilium-up -> netpol-up -> image-load -> otelcol-up -> session-create` default local flow (bare `make`): build the sandbox image from ci/docker/Dockerfile, registry up, cluster up, cilium + egress policy, push to local registry, open a session shell; no GitLab registry
+`all`: `image-pull -> registry-up -> cluster-up -> cilium-up -> netpol-up -> image-load -> otelcol-up -> session-create` default flow (bare `make`): pull the newest published sandbox image from this project's GitLab registry (private: needs a prior `docker login registry.gitlab.com`), registry up, cluster up, cilium + egress policy, push to local registry, open a session shell
+`all-build`: `image-build -> registry-up -> cluster-up -> cilium-up -> netpol-up -> image-load -> otelcol-up -> session-create` sandbox-dev flow: build the sandbox image locally from ci/docker/Dockerfile instead of pulling the published one, registry up, cluster up, cilium + egress policy, push to local registry, open a session shell; no GitLab registry
 `all-scratch`: `prune -> all-build` all-build from scratch: delete the cluster and prune local images first
 
 ### Sandbox:
@@ -28,7 +28,7 @@
 `netpol-up` apply the default-deny + FQDN allowlist egress policy (ci/k8s/netpol.yml) to the session pods
 `image-load` tag sandbox:local as localhost:5001/sandbox:local and push it to the host registry (only changed layers upload); session pods pull it via the containerd mirror
 `otelcol-up` deploy the in-cluster otel collector (forwards session telemetry to the host otelcol) and wait for rollout
-`session-create` create a new SESSION pod (overlay home diff on the shared PVC), run the sandbox-runtime profile (auth check, ssh keys, workspace clone + index), and exec a login zsh; exit leaves it running. SESSION unset -> s-<datetime>
+`session-create` create a new SESSION pod (overlay home diff on the shared PVC): refresh sandbox:local to the newest published image first (pull + load when stale or missing; local dev builds are kept), run the sandbox-runtime profile (auth check, ssh keys, workspace clone + index), and exec a login zsh; exit leaves it running. SESSION unset -> s-<datetime>
 `session-attach` attach a login zsh to an existing session; SESSION unset -> most recent running session
 `session-stop` delete the SESSION pod, keep its home diff (session survives)
 `session-rm` delete the SESSION pod and its home diff

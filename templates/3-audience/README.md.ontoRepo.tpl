@@ -15,10 +15,14 @@ Local claude session sandbox.
 The pod image is `registry.gitlab.com/konradodwrot-restricted/sandbox/sandbox`
 (config-baked via the `sandbox-build` profile in `ci/docker/che.yml`, no secrets; amd64 on
 bare tags, arm64 with an `-arm64` suffix), built from `ci/docker/Dockerfile`
-and published by this project's own CI to its private registry. `image-build`
-builds it locally as `sandbox:local`; `image-pull` pulls the published one
-(`SANDBOX_TAG`, default `latest`, arch suffix auto-appended on arm64 hosts,
-needs a prior `docker login registry.gitlab.com`) and retags it `sandbox:local`; `registry-up` starts a host-local
+and published by this project's own CI to its private registry. `image-pull`
+(the default flow) pulls the published one (`SANDBOX_TAG`, default `latest`,
+arch suffix auto-appended on arm64 hosts, needs a prior
+`docker login registry.gitlab.com`) and retags it `sandbox:local`;
+`image-build` (sandbox dev) builds it locally instead. `session-create`
+re-checks the published digest on every run and refreshes a stale or missing
+`sandbox:local` (local dev builds are kept); `session-attach` warns when the
+pod runs an outdated image. `registry-up` starts a host-local
 `registry:2` (`kind-registry`, `127.0.0.1:5001`) and `image-load` tags
 `sandbox:local` as `localhost:5001/sandbox:local` and pushes it there. A
 containerd mirror patch in `kind.yml` maps `localhost:5001` to
@@ -31,7 +35,7 @@ off the external network.
 ## Use
 
 ```sh
-$ make all
+$ make
 $ make session-create
 $ make session-create SESSION=s-mytopic
 $ make session-attach

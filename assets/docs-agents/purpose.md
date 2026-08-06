@@ -7,21 +7,25 @@ control-plane node for the management plane, one worker node for the data
 plane) running persistent per-session pods on the worker. This repo owns the
 sandbox image and its config composition: `ci/docker/` bakes a
 `debian:bookworm-slim` base with che, a shallow clone of the public `configs`
-repo at `~/configs`, and a `sandbox-build` profile (defined in
+repo at its standard workspace path (`~/projects/gitlab/konradodwrot/configs`,
+kept synced as a normal workspace repo from then on), and a `sandbox-build`
+profile (defined in
 `ci/docker/che.yml`, composing configs tool profiles from that clone: zsh,
 git, claude, codex, gcloud, glab, ssh config; secret-free by construction),
 CI publishes it per-arch to this project's private registry
 (`registry.gitlab.com/konradodwrot-restricted/sandbox/sandbox`, amd64 bare
-tags, arm64 `-arm64` suffixed). The host builds it locally (`make`, bare) or
-pulls the published image (`make all`, needs `docker login`), tags it
-`sandbox:local`, then pushes it to a host-local `registry:2`
+tags, arm64 `-arm64` suffixed). The host pulls the newest published image by
+default (`make`, bare; needs `docker login`; `session-create` re-checks and
+refreshes a stale pull on every run) or builds it locally for sandbox dev
+(`make all-build`), tags it `sandbox:local`, then pushes it to a host-local
+`registry:2`
 (`kind-registry`, `127.0.0.1:5001`) that a containerd mirror patch maps to
 `kind-registry:5000` in-network, so nodes pull it and iterative builds transfer
 only changed layers by digest instead of re-loading the whole image tar. At pod
-creation, `session-create` pulls `~/configs` fresh and runs the
-`sandbox-runtime` profile in the pod: ADC auth check, ssh keypair rendered
-from GCP Secrets Manager, workspace clone + repo index — every secret enters
-at runtime, none is baked. Session
+creation, `session-create` refreshes the configs checkout (skipped when dirty)
+and runs the `sandbox-runtime` profile in the pod: ADC auth check, ssh keypair
+rendered from GCP Secrets Manager, workspace clone + repo index — every secret
+enters at runtime, none is baked. Session
 home is an
 overlayfs: the image's baked `/home/ko` is the shared read-only base, one
 shared PVC keeps each session's writable diff, so session state survives pod

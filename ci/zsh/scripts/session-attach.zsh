@@ -17,6 +17,22 @@ if [[ -z ${SESSION-} ]] {
 
 $kc get pod $SESSION >/dev/null 2>&1 || fn-exit-with 1 "${0:t}: session $SESSION not running; use session-create"
 
+#[why] warn-only freshness check: the pod's manifest digest survives the pull -> retag -> local-registry push chain unchanged, so it compares directly against the published tag's digest; a mismatch means a newer image was published (or the pod runs a local dev build). best-effort: no docker/yq/registry auth -> note and attach anyway
+typeset tag=${SANDBOX_TAG:-latest}
+[[ $(uname -m) == (arm64|aarch64) ]] && tag+=-arm64
+typeset image=registry.gitlab.com/konradodwrot-restricted/sandbox/sandbox:$tag
+typeset pod_digest=$($kc get pod $SESSION -o jsonpath='{.status.containerStatuses[0].imageID}' 2>/dev/null)
+pod_digest=${pod_digest##*@}
+typeset remote_digest=''
+if { (( $+commands[docker] )) && (( $+commands[yq] )) } {
+  remote_digest=$(docker manifest inspect -v $image 2>/dev/null | yq -p json '.Descriptor.digest' 2>/dev/null) || remote_digest=''
+}
+if [[ -z $remote_digest || $remote_digest == null ]] {
+  print -r -- "${0:t}: could not verify image freshness against $image"
+} elif [[ $pod_digest != $remote_digest ]] {
+  print -r -- "${0:t}: pod image is not the newest published $image; update: make session-stop session-create SESSION=$SESSION (home diff survives)"
+}
+
 #[why] ONLY the GCP identity is injected: the restricted SA key (JSON) from 1password becomes the pod's ADC; the pod resolves every other secret at runtime from GCP Secrets Manager. attach skips the create-render (keys already on the overlay diff)
 typeset gcp_sa_key=${GCP_SA_KEY-}
 if { [[ -z $gcp_sa_key ]] && (( $+commands[op] )) } {

@@ -12,21 +12,25 @@ control-plane node for the management plane, one worker node for the data
 plane) running persistent per-session pods on the worker. This repo owns the
 sandbox image and its config composition: `ci/docker/` bakes a
 `debian:bookworm-slim` base with che, a shallow clone of the public `configs`
-repo at `~/configs`, and a `sandbox-build` profile (defined in
+repo at its standard workspace path (`~/projects/gitlab/konradodwrot/configs`,
+kept synced as a normal workspace repo from then on), and a `sandbox-build`
+profile (defined in
 `ci/docker/che.yml`, composing configs tool profiles from that clone: zsh,
 git, claude, codex, gcloud, glab, ssh config; secret-free by construction),
 CI publishes it per-arch to this project's private registry
 (`registry.gitlab.com/konradodwrot-restricted/sandbox/sandbox`, amd64 bare
-tags, arm64 `-arm64` suffixed). The host builds it locally (`make`, bare) or
-pulls the published image (`make all`, needs `docker login`), tags it
-`sandbox:local`, then pushes it to a host-local `registry:2`
+tags, arm64 `-arm64` suffixed). The host pulls the newest published image by
+default (`make`, bare; needs `docker login`; `session-create` re-checks and
+refreshes a stale pull on every run) or builds it locally for sandbox dev
+(`make all-build`), tags it `sandbox:local`, then pushes it to a host-local
+`registry:2`
 (`kind-registry`, `127.0.0.1:5001`) that a containerd mirror patch maps to
 `kind-registry:5000` in-network, so nodes pull it and iterative builds transfer
 only changed layers by digest instead of re-loading the whole image tar. At pod
-creation, `session-create` pulls `~/configs` fresh and runs the
-`sandbox-runtime` profile in the pod: ADC auth check, ssh keypair rendered
-from GCP Secrets Manager, workspace clone + repo index — every secret enters
-at runtime, none is baked. Session
+creation, `session-create` refreshes the configs checkout (skipped when dirty)
+and runs the `sandbox-runtime` profile in the pod: ADC auth check, ssh keypair
+rendered from GCP Secrets Manager, workspace clone + repo index — every secret
+enters at runtime, none is baked. Session
 home is an
 overlayfs: the image's baked `/home/ko` is the shared read-only base, one
 shared PVC keeps each session's writable diff, so session state survives pod
@@ -89,8 +93,8 @@ Each convention dir carries a runnable `example/`. This repo itself follows all 
 
 ### Wrappers:
 
-`all`: `image-pull -> registry-up -> cluster-up -> cilium-up -> netpol-up -> image-load -> otelcol-up -> session-create` remote flow: pull the published sandbox image from this project's GitLab registry (private: needs a prior `docker login registry.gitlab.com`), registry up, cluster up, cilium + egress policy, push to local registry, open a session shell
-`all-build`: `image-build -> registry-up -> cluster-up -> cilium-up -> netpol-up -> image-load -> otelcol-up -> session-create` default local flow (bare `make`): build the sandbox image from ci/docker/Dockerfile, registry up, cluster up, cilium + egress policy, push to local registry, open a session shell; no GitLab registry
+`all`: `image-pull -> registry-up -> cluster-up -> cilium-up -> netpol-up -> image-load -> otelcol-up -> session-create` default flow (bare `make`): pull the newest published sandbox image from this project's GitLab registry (private: needs a prior `docker login registry.gitlab.com`), registry up, cluster up, cilium + egress policy, push to local registry, open a session shell
+`all-build`: `image-build -> registry-up -> cluster-up -> cilium-up -> netpol-up -> image-load -> otelcol-up -> session-create` sandbox-dev flow: build the sandbox image locally from ci/docker/Dockerfile instead of pulling the published one, registry up, cluster up, cilium + egress policy, push to local registry, open a session shell; no GitLab registry
 `all-scratch`: `prune -> all-build` all-build from scratch: delete the cluster and prune local images first
 
 ### Sandbox:
@@ -105,7 +109,7 @@ Each convention dir carries a runnable `example/`. This repo itself follows all 
 `netpol-up` apply the default-deny + FQDN allowlist egress policy (ci/k8s/netpol.yml) to the session pods
 `image-load` tag sandbox:local as localhost:5001/sandbox:local and push it to the host registry (only changed layers upload); session pods pull it via the containerd mirror
 `otelcol-up` deploy the in-cluster otel collector (forwards session telemetry to the host otelcol) and wait for rollout
-`session-create` create a new SESSION pod (overlay home diff on the shared PVC), run the sandbox-runtime profile (auth check, ssh keys, workspace clone + index), and exec a login zsh; exit leaves it running. SESSION unset -> s-<datetime>
+`session-create` create a new SESSION pod (overlay home diff on the shared PVC): refresh sandbox:local to the newest published image first (pull + load when stale or missing; local dev builds are kept), run the sandbox-runtime profile (auth check, ssh keys, workspace clone + index), and exec a login zsh; exit leaves it running. SESSION unset -> s-<datetime>
 `session-attach` attach a login zsh to an existing session; SESSION unset -> most recent running session
 `session-stop` delete the SESSION pod, keep its home diff (session survives)
 `session-rm` delete the SESSION pod and its home diff

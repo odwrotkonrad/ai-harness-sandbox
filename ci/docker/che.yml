@@ -1,25 +1,26 @@
 # yaml-language-server: $schema=https://gitlab.com/konradodwrot/go-modules/-/raw/main/che/assets/data/che.schema.json
 ##[>] 🤖🤖
-#[why] baked to /home/ko/che.yml, composing configs tool profiles from the shallow clone the Dockerfile bakes at ~/configs (che remote refs resolve only repo-root specs, so nested tool specs need a filesystem source); no autoDiscover, each caller names its profile
+#[why] baked to ~/.sandbox-che/che.yml (its own tiny git repo: che resolves the spec from its working directory's repo root), composing configs tool profiles from the shallow clone the Dockerfile bakes at ~/projects/gitlab/konradodwrot/configs (che remote refs resolve only repo-root specs, so nested tool specs need a filesystem source); no autoDiscover, each caller names its profile
 #[why] sandbox-build (image bake): secret-free tool set only. ssh is the config-links profile, never ssh/virt: isVirt is true inside a docker build, so ssh/virt would fire and try to bake keys
 sandbox-build:
   include:
     profiles:
-      - source: "~/configs/tools/zsh/base/che.yml::zsh/base-linux"
-      - source: "~/configs/tools/git/che.yml::git"
-      - source: "~/configs/tools/claude/che.yml::claude"
-      - source: "~/configs/tools/codex/che.yml::codex"
-      - source: "~/configs/tools/gcp/che.yml::gcp/install"
-      - source: "~/configs/tools/gitlab/glab/che.yml::gitlab/glab"
-      - source: "~/configs/tools/ssh/che.yml::ssh"
+      - source: "~/projects/gitlab/konradodwrot/configs/profiles/shell/zsh/base/che.yml::shell/zsh/base-linux"
+      - source: "~/projects/gitlab/konradodwrot/configs/profiles/git/che.yml::git"
+      - source: "~/projects/gitlab/konradodwrot/configs/profiles/llm/base/che.yml::llm/base"
+      - source: "~/projects/gitlab/konradodwrot/configs/profiles/llm/claude/che.yml::llm/claude"
+      - source: "~/projects/gitlab/konradodwrot/configs/profiles/llm/codex/che.yml::llm/codex"
+      - source: "~/projects/gitlab/konradodwrot/configs/profiles/cloud/gcp/che.yml::cloud/gcp/install"
+      - source: "~/projects/gitlab/konradodwrot/configs/profiles/gitlab/glab/che.yml::gitlab/glab"
+      - source: "~/projects/gitlab/konradodwrot/configs/profiles/misc/ssh/che.yml::misc/ssh"
 
-#[why] sandbox-runtime (pod creation, session-create pulls ~/configs fresh first): fail fast on missing ADC (gcp/auth), render the ssh keypair from gcp:// (ssh/virt), clone + index the workspace (gitlab/projects; needs GITLAB_TOKEN materialized by the caller, session-create fetches it from $GITLAB_TOKEN_SECRET_PATH via the pod's ADC)
+#[why] sandbox-runtime (pod creation, session-create refreshes the configs checkout first): fail fast on missing ADC (gcp/auth), render the ssh keypair from gcp:// (ssh/virt), clone + index the workspace (gitlab/projects; needs GITLAB_TOKEN materialized by the caller, session-create fetches it from $GITLAB_TOKEN_SECRET_PATH via the pod's ADC)
 sandbox-runtime:
   include:
     profiles:
-      - source: "~/configs/tools/gcp/che.yml::gcp/auth"
-      - source: "~/configs/tools/ssh/che.yml::ssh/virt"
-      - source: "~/configs/tools/gitlab/projects/che.yml::gitlab/projects"
+      - source: "~/projects/gitlab/konradodwrot/configs/profiles/cloud/gcp/che.yml::cloud/gcp/auth"
+      - source: "~/projects/gitlab/konradodwrot/configs/profiles/misc/ssh/che.yml::misc/ssh/virt"
+      - source: "~/projects/gitlab/konradodwrot/configs/profiles/gitlab/projects/che.yml::gitlab/projects"
         env:
           GITLAB_GROUPS: "konradodwrot:konradodwrot"
 ##[<] 🤖🤖
