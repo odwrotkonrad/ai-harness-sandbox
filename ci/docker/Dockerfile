@@ -35,6 +35,7 @@ COPY --chown=$SANDBOX_USER ci/docker/che.yml /home/$SANDBOX_USER/.sandbox-che/ch
 #[why] shallow configs clone baked at its standard workspace path: the che.yml wrapper composes configs tool profiles from it via filesystem sources (che remote refs resolve only repo-root specs), and at pod creation gitlab/projects treats it as a normal workspace repo and keeps it synced (session-create also refreshes it before the runtime run). CONFIGS_REF busts this layer only when configs profiles/ moved, so an unchanged configs keeps the cached layer
 #[why] CHE_OTEL_ENABLED=false: no otel collector exists during the image build, so che's exporter would spew "connect: connection refused" on every op
 #[why] CHE_RENDER_TEMPLATES_SKIP_SECRETS=true: the bake must stay secret-free by construction; the sandbox-build set carries no secret templates today, this guards future additions from failing the build or baking a secret. sandbox-runtime re-renders at pod creation
+#[why] CHE_ERREXIT=true: a failed profile script means a broken image, so stop the bake at the first failure instead of finishing minutes of doomed work (env not flag: an older che ignores the env, a released one honors it)
 ARG CONFIGS_REF=main
 RUN set -eux; \
     : "${CONFIGS_REF}"; \
@@ -42,7 +43,7 @@ RUN set -eux; \
     git -C /home/$SANDBOX_USER/.sandbox-che init --quiet; \
     git -C /home/$SANDBOX_USER/.sandbox-che add che.yml; \
     cd /home/$SANDBOX_USER/.sandbox-che; \
-    CI=1 container=docker CHE_OTEL_ENABLED=false CHE_VALIDATE_SPEC=error CHE_RENDER_TEMPLATES_SKIP_SECRETS=true \
+    CI=1 container=docker CHE_OTEL_ENABLED=false CHE_VALIDATE_SPEC=error CHE_RENDER_TEMPLATES_SKIP_SECRETS=true CHE_ERREXIT=true \
     che run --profiles sandbox-build
 
 CMD ["zsh", "-l"]
