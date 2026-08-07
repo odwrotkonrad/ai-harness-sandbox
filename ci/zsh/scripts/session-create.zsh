@@ -40,12 +40,12 @@ if [[ -z $remote_digest || $remote_digest == null ]] {
 yq '(.. | select(tag == "!!str")) |= envsubst' $repo_root/ci/k8s/session.yml | $kc apply -f -
 $kc wait --for=condition=Ready pod/$SESSION --timeout=300s
 
-#[why] ONLY the GCP identity is injected: the restricted SA key (JSON) from 1password becomes the pod's ADC. every other sandbox secret (ssh keys, gitlab token) is fetched at runtime IN the pod from GCP Secrets Manager via this ADC, never read on the host and passed in
+#[why] ONLY the GCP identity is injected: the sandbox SA key (JSON, terraform-written by iac's auth module) from 1password becomes the pod's ADC. every other sandbox secret (ssh keys, gitlab token) is fetched at runtime IN the pod from GCP Secrets Manager via this ADC, never read on the host and passed in
 typeset gcp_sa_key=${GCP_SA_KEY-}
 if { [[ -z $gcp_sa_key ]] && (( $+commands[op] )) } {
-  gcp_sa_key=$(op read 'op://ProgrammaticAccess/sandbox_restricted/sa_key' 2>/dev/null) || gcp_sa_key=''
+  gcp_sa_key=$(op read 'op://SandboxProgrammaticAccess/sandbox-gcp-sa/keys/sa_key' 2>/dev/null) || gcp_sa_key=''
 }
-[[ -n $gcp_sa_key ]] || fn-exit-with 1 "${0:t}: no GCP SA key (op://ProgrammaticAccess/sandbox_restricted/sa_key empty); the pod's ADC identity is required"
+[[ -n $gcp_sa_key ]] || fn-exit-with 1 "${0:t}: no GCP SA key (op://SandboxProgrammaticAccess/sandbox-gcp-sa/keys/sa_key empty); the pod's ADC identity is required"
 
 #[why] on create only: refresh the baked workspace configs checkout to main tip (skipped when dirty: a reused session's local edits are never clobbered; gitlab/projects syncs the rest of the workspace), then run the sandbox-runtime profile against the baked ~/.sandbox-che/che.yml wrapper (filesystem sources into that checkout): gcp/auth fails fast on a broken ADC, ssh/virt renders the keypair from GCP Secrets Manager (gcp:// via the injected ADC), gitlab/projects clones + indexes the workspace. the baked image is secret-free, so a fresh pod has no keys until this runs
 #[why] GOOGLE_APPLICATION_CREDENTIALS (exported by 30-adc after materializing ADC in the same login shell) is the op://<->gcp:// template discriminator; GITLAB_TOKEN (gitlab/projects runIf + clone auth) is fetched in-pod from $GITLAB_TOKEN_SECRET_PATH via that ADC, never read on the host

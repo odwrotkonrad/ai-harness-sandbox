@@ -7,6 +7,8 @@ ci
   k8s
   zsh
     scripts
+spec
+  session
 templates
   1-env
   2-data
