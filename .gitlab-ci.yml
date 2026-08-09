@@ -39,8 +39,8 @@ variables:
     - docker buildx create --use --driver docker-container dind
     #[why] etag of the latest che tarball -> CHE_REF build-arg: busts the Dockerfile che layer only when che re-published (unchanged che keeps the cached layer). wget not curl: the docker:27-cli job image is alpine/busybox (no curl)
     - CHE_REF="$(wget -S --spider -q -O /dev/null "https://gitlab.com/api/v4/projects/konradodwrot%2Fgo-modules/packages/generic/che/latest/che_latest_linux_amd64.tar.gz" 2>&1 | tr -d '\r' | awk 'tolower($1)=="etag:"{print $2}')"
-    #[why] latest commit touching tools -> CONFIGS_REF build-arg: busts the clone + che run layer only when the sourced configs tool profiles themselves changed, not on every configs push, no --no-cache
-    - CONFIGS_REF="$(wget -qO- 'https://gitlab.com/api/v4/projects/konradodwrot%2Fconfigs/repository/commits?path=tools&per_page=1' | sed -n 's/.*"id":"\([0-9a-f]*\)".*/\1/p')"
+    #[why] latest commit touching profiles -> CONFIGS_REF build-arg: busts the clone + che run layer only when the sourced configs tool profiles themselves changed, not on every configs push, no --no-cache
+    - CONFIGS_REF="$(wget -qO- 'https://gitlab.com/api/v4/projects/konradodwrot%2Fconfigs/repository/commits?path=profiles&per_page=1' | sed -n 's/.*"id":"\([0-9a-f]*\)".*/\1/p')"
 
 build-sandbox-image-amd64:
   extends: .build-image
