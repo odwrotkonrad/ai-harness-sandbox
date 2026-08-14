@@ -84,7 +84,9 @@ ci
   zsh
     scripts
 spec
-  session
+  unvetted_ai
+    session
+  vetted
 templates
   1-env
   2-data
