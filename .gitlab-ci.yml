@@ -13,7 +13,6 @@ variables:
   CI_IMAGE: registry.gitlab.com/konradodwrot/infra/oci-images/ci-linux:latest
   SANDBOX_IMAGE: $CI_REGISTRY_IMAGE/sandbox
 
-#[why] one job per arch: qemu-emulated arm64 in one multi-arch build doubles the wall clock; the bake (apt + brew + che run) is qemu-hostile, so arm64 runs natively on a gitlab-hosted arm64 runner and pushes -arm64 suffixed tags (a single-arch push to a shared tag would clobber the other arch's manifest). BUILD_SANDBOX_IMAGE (configs main / oci-images che-release trigger) rebuilds both
 .build-image:
   stage: build-image
   image: docker:27-cli
@@ -37,9 +36,7 @@ variables:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
     - docker context create dind --docker "host=$DOCKER_HOST,ca=$DOCKER_CERT_PATH/ca.pem,cert=$DOCKER_CERT_PATH/cert.pem,key=$DOCKER_CERT_PATH/key.pem"
     - docker buildx create --use --driver docker-container dind
-    #[why] etag of the latest che tarball -> CHE_REF build-arg: busts the Dockerfile che layer only when che re-published (unchanged che keeps the cached layer). wget not curl: the docker:27-cli job image is alpine/busybox (no curl)
     - CHE_REF="$(wget -S --spider -q -O /dev/null "https://gitlab.com/api/v4/projects/konradodwrot%2Fgo-modules/packages/generic/che/latest/che_latest_linux_amd64.tar.gz" 2>&1 | tr -d '\r' | awk 'tolower($1)=="etag:"{print $2}')"
-    #[why] latest commit touching profiles -> CONFIGS_REF build-arg: busts the clone + che run layer only when the sourced configs tool profiles themselves changed, not on every configs push, no --no-cache
     - CONFIGS_REF="$(wget -qO- 'https://gitlab.com/api/v4/projects/konradodwrot%2Fconfigs/repository/commits?path=profiles&per_page=1' | sed -n 's/.*"id":"\([0-9a-f]*\)".*/\1/p')"
 
 build-sandbox-image-amd64:

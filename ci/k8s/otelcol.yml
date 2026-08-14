@@ -11,7 +11,6 @@ data:
         protocols:
           grpc: {endpoint: 0.0.0.0:4317}
           http: {endpoint: 0.0.0.0:4318}
-      #[why] scrape the hubble-metrics openmetrics endpoint (:9965) on each cilium agent pod in kube-system; the resulting hubble_* flow/drop/dns series ride the existing metrics pipeline to the host otelcol -> :8889 -> host prometheus, feeding the sandbox-egress grafana dashboard
       prometheus:
         config:
           scrape_configs:
@@ -24,19 +23,16 @@ data:
                   regex: cilium
                 - source_labels: [__meta_kubernetes_pod_ip]
                   target_label: __address__
-                  #[why] $$ escapes to a literal $ (the collector env-expands its own config); leaves $1 for prometheus relabel capture, do not "fix" to $1
                   replacement: $$1:9965
 
     processors:
       batch: {}
-      #[why] stamp sandbox-wide origin markers on every signal so session telemetry is distinguishable from host telemetry wherever it lands (prom labels, loki labels, jaeger process tags); session identity + signal type ride in from the pod via OTEL_RESOURCE_ATTRIBUTES
       resource/sandbox:
         attributes:
           - {key: deployment.environment, value: sandbox, action: upsert}
           - {key: otel.origin, value: sandbox-pod, action: upsert}
 
     exporters:
-      #[why] forward into the host otelcol (reuses its prometheus/jaeger/loki fan-out); host.docker.internal reaches the macos host from the kind VM
       otlp:
         endpoint: host.docker.internal:4317
         tls: {insecure: true}
@@ -47,7 +43,6 @@ data:
         metrics: {receivers: [otlp, prometheus], processors: [resource/sandbox, batch], exporters: [otlp]}
         logs:    {receivers: [otlp], processors: [resource/sandbox, batch], exporters: [otlp]}
 ---
-#[why] the prometheus receiver's kubernetes_sd needs to list pods to discover the cilium agents; scoped to pod get/list/watch only
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -89,7 +84,6 @@ spec:
       labels: {app: sandbox-otelcol}
     spec:
       serviceAccountName: sandbox-otelcol
-      #[why] the control-plane node is tainted; tolerate it so the collector schedules on either node
       tolerations:
         - {key: node-role.kubernetes.io/control-plane, operator: Exists, effect: NoSchedule}
       containers:

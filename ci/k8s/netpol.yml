@@ -1,5 +1,4 @@
 ##[>] 🤖🤖🤖
-#[why] one policy selecting the session pods with any egress rule makes them default-deny, so every allowed destination is explicit. kube-dns rule: 53 + dns visibility (matchPattern "*") lets cilium snoop every resolution, the prerequisite for toFQDNs matching. otelcol rule: in-cluster telemetry on 4317. toFQDNs rule: the only internet egress, allowlisted FQDNs on 443 (TLS) only; no port-80 rule anywhere so plain HTTP is denied by default-deny, raw IPs and unlisted domains dropped in-kernel. extend by adding one matchName/matchPattern line under toFQDNs below
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -39,7 +38,6 @@ spec:
       toPorts:
         - ports:
             - {port: "443", protocol: TCP}
-    #[why] git-over-ssh transport: gitlab.com only, port 22. separate from the 443 allowlist so ssh egress is scoped to gitlab, everything else stays HTTPS-only
     - toFQDNs:
         - {matchName: gitlab.com}
       toPorts:
