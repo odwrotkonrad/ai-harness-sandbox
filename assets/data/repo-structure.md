@@ -7,6 +7,10 @@ ci
   k8s
   zsh
     scripts
+spec
+  unvetted_ai
+    session
+  vetted
 templates
   1-env
   2-data

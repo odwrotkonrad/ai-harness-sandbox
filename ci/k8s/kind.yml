@@ -2,14 +2,11 @@
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: sandbox
-#[why] cilium owns the dataplane (FQDN egress policy): drop kindnet so cilium is the CNI; kube-proxy stays (FQDN policy needs no kubeProxyReplacement)
 networking:
   disableDefaultCNI: true
-#[why] control-plane keeps its NoSchedule taint in multi-node clusters: mgmt plane stays clean, session pods land on the worker
 nodes:
   - role: control-plane
   - role: worker
-#[why] mirror localhost:5001 -> the host registry's in-network endpoint: host push (localhost:5001) and node pull (localhost:5001 inside the node) both resolve kind-registry:5000, so builds transfer only changed layers by digest
 containerdConfigPatches:
   - |-
     [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]

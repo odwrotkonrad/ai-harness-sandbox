@@ -12,8 +12,6 @@ typeset -a kc=( kubectl --context kind-sandbox )
 
 $kc delete pod $SESSION --ignore-not-found
 
-#[why] home diffs live as subdirs on the shared sandbox-home PVC: wipe this session's dir via a one-shot pod. --attach=false + wait-for-complete (not --rm -i) so the rm -rf actually finishes before the pod is torn down, and no interactive-tty banner / delete chatter leaks
-#[why] privileged + runAsUser 0: the diff is an overlayfs dir (upper/ + work/), and the kernel-owned work/work subdir refuses unlink without CAP_DAC_OVERRIDE, so a plain rm fails "permission denied". the session pod runs privileged for the same reason
 typeset remover=${SESSION}-rm
 $kc run $remover --restart=Never --image=localhost:5001/sandbox:local --attach=false --overrides='{
   "spec": {

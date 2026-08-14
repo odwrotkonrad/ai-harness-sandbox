@@ -1,5 +1,4 @@
 ##[>] 🤖🤖
-#[what] Project's Makefile
 SHELL := zsh
 .SHELLFLAGS := -c
 export PATH := $(CURDIR)/ci/zsh/scripts:$(PATH)
@@ -9,7 +8,6 @@ COMMANDS := render-templates repo-ci-prepare-hooks repo-ci-precommit-all image-p
 
 .PHONY: $(WRAPPERS) $(COMMANDS)
 
-#[why] default to the standard remote flow: bare `make` pulls the newest published image; the local build stays an explicit `make all-build` for sandbox dev
 .DEFAULT_GOAL := all
 
 ##[>] Environment Variables [genai-include]
