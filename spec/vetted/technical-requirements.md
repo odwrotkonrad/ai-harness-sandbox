@@ -2,4 +2,4 @@
 
 ## Container Provider
 
-- Containers must run rootless, which is why podman is the provider and docker is not: docker cannot do it on macos.
+- Containers must run rootless: podman is the provider, not docker (docker cannot do it on macos).

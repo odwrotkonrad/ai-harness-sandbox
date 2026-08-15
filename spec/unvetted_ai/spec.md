@@ -1,6 +1,6 @@
 # Spec
 
-- k8s nodes are run in rootless mode
+- k8s nodes run rootless
 
 <!--[>] 🤖🤖 -->
 Feature: Rootless cluster nodes
