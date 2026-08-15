@@ -18,7 +18,7 @@ sandbox-runtime:
     profiles:
       - source: "~/projects/gitlab/konradodwrot/configs/profiles/cloud/gcp/che.yml::cloud/gcp/auth"
       - source: "~/projects/gitlab/konradodwrot/configs/profiles/misc/ssh/che.yml::misc/ssh/virt"
-      - source: "~/projects/gitlab/konradodwrot/configs/profiles/gitlab/projects/che.yml::gitlab/projects"
+      - source: "@https://gitlab.com/konradodwrot/control//workspace/che.yml::gitlab/projects"
         env:
           GITLAB_GROUPS: "konradodwrot:konradodwrot"
 ##[<] 🤖🤖
