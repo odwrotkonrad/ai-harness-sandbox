@@ -5,5 +5,5 @@ extends:
 pre-commit:
   jobs:
     - name: docsgen
-      run: make render-templates && git diff --exit-code
+      run: che render-templates --profiles ontoRepo && git diff --exit-code
 ##[<] 🤖
