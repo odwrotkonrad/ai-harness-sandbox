@@ -1,0 +1,14 @@
+##[>] 🤖🤖
+upstream:
+  - prose/repo-prose
+  - prose/conventions-doc
+  - prose/doc-templates
+  - prose/license
+  - configs/llm/claude
+  - infra/oci-images/ci-linux
+  - {consumes: configs/llm/claude, into: sandbox}
+  - {consumes: go-modules/che, into: sandbox}
+  - {consumes: configs/zsh/base-linux, into: sandbox}
+downstream:
+  - {name: sandbox, type: oci-image}
+##[<] 🤖🤖
