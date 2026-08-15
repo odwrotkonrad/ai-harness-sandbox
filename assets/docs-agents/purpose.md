@@ -2,12 +2,12 @@
 
 ## What It Is
 
-AI Agent Session Sandbox running on a k8s cluster.
+AI agent session sandbox on a k8s cluster.
 
 ## Why It Exists
 
-Allows running claude in a secure, isolated environment.
+Runs claude isolated from the host, so it can act freely without risking it.
 
 ## Goals
 
-- Run AI Agents isolated from the host, where AI agents can do anything securely.
+- AI agents isolated from the host, free to do anything safely.
