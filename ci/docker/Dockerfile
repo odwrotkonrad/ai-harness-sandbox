@@ -30,7 +30,6 @@ WORKDIR /home/$SANDBOX_USER
 COPY --chown=$SANDBOX_USER ci/docker/che.yml /home/$SANDBOX_USER/.sandbox-che/che.yml
 
 ARG CONFIGS_REF=main
-ARG CHE_PACKAGES_SILENCE_INSTALL_STDOUT=true
 RUN set -eux; \
     : "${CONFIGS_REF}"; \
     git clone --quiet --depth 1 --single-branch https://gitlab.com/konradodwrot/configs.git /home/$SANDBOX_USER/projects/gitlab/konradodwrot/configs; \
@@ -38,7 +37,6 @@ RUN set -eux; \
     git -C /home/$SANDBOX_USER/.sandbox-che add che.yml; \
     cd /home/$SANDBOX_USER/.sandbox-che; \
     CI=1 container=docker CHE_OTEL_ENABLED=false CHE_VALIDATE_SPEC=error CHE_RENDER_TEMPLATES_SKIP_SECRETS=true CHE_ERREXIT=true \
-    CHE_PACKAGES_SILENCE_INSTALL_STDOUT="${CHE_PACKAGES_SILENCE_INSTALL_STDOUT}" \
     che run --profiles sandbox-build
 
 CMD ["zsh", "-l"]

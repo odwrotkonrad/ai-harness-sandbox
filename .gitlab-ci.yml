@@ -48,7 +48,6 @@ build-sandbox-image-amd64:
         --platform linux/amd64
         --build-arg "CHE_REF=$CHE_REF"
         --build-arg "CONFIGS_REF=$CONFIGS_REF"
-        --build-arg "CHE_PACKAGES_SILENCE_INSTALL_STDOUT=${CHE_PACKAGES_SILENCE_INSTALL_STDOUT:-true}"
         --tag "$SANDBOX_IMAGE:latest"
         --tag "$SANDBOX_IMAGE:$CI_COMMIT_SHORT_SHA"
         --push
@@ -64,7 +63,6 @@ build-sandbox-image-arm64:
         --platform linux/arm64
         --build-arg "CHE_REF=$CHE_REF"
         --build-arg "CONFIGS_REF=$CONFIGS_REF"
-        --build-arg "CHE_PACKAGES_SILENCE_INSTALL_STDOUT=${CHE_PACKAGES_SILENCE_INSTALL_STDOUT:-true}"
         --tag "$SANDBOX_IMAGE:latest-arm64"
         --tag "$SANDBOX_IMAGE:$CI_COMMIT_SHORT_SHA-arm64"
         --push
