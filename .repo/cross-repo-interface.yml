@@ -6,9 +6,10 @@ upstream:
   - prose/license
   - configs/llm/claude
   - infra/oci-images/ci-linux
-  - {consumes: configs/llm/claude, into: sandbox}
-  - {consumes: go-modules/che, into: sandbox}
-  - {consumes: configs/zsh/base-linux, into: sandbox}
+edges:
+  configs/llm/claude: [sandbox]
+  go-modules/che: [sandbox]
+  configs/zsh/base-linux: [sandbox]
 downstream:
   - {name: sandbox, type: oci-image}
 ##[<] 🤖🤖
