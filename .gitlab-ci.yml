@@ -9,6 +9,13 @@ stages:
   - build-image
   - validate
 
+#[why] all CI runs on the self-hosted GKE runners: no SaaS compute minutes remain. set once here so a
+#   new job inherits it instead of silently having no runner. jobs needing arm64 or another size
+#   override with their own tags
+default:
+  tags:
+    - gke-linux-amd64
+
 variables:
   CI_IMAGE: registry.gitlab.com/konradodwrot/infra/oci-images/ci-linux:latest
   SANDBOX_IMAGE: $CI_REGISTRY_IMAGE/sandbox
@@ -55,7 +62,7 @@ build-sandbox-image-amd64:
 
 build-sandbox-image-arm64:
   extends: .build-image
-  tags: [saas-linux-medium-arm64]
+  tags: [gke-linux-arm64]
   needs: []
   script:
     - docker buildx build
