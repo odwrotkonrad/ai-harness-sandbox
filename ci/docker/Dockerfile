@@ -17,7 +17,7 @@ RUN set -eux; \
     esac; \
     che_base="https://gitlab.com/api/v4/projects/konradodwrot%2Fgo-modules/packages/generic/che/latest"; \
     curl -fsSL --connect-timeout 30 --retry 10 --retry-delay 30 --retry-all-errors -o /tmp/che.tar.gz "${che_base}/che_latest_${plat}.tar.gz"; \
-    tar -xz -C /usr/local/bin -f /tmp/che.tar.gz che render-tpl render-repo-group-index; \
+    tar -xz -C /usr/local/bin -f /tmp/che.tar.gz che; \
     rm /tmp/che.tar.gz
 
 ARG SANDBOX_USER=ko

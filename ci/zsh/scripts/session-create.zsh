@@ -46,7 +46,7 @@ if { [[ -z $gcp_sa_key ]] && (( $+commands[op] )) } {
 
 
 $kc exec $SESSION -- env "GCP_SA_KEY=$gcp_sa_key" su -w GCP_SA_KEY,CHE_OTEL_ENDPOINT - ko -c \
-  'cd ~/.sandbox-che && cfg=~/projects/gitlab/konradodwrot/configs && { { [[ -z $(git -C $cfg status --porcelain) ]] && git -C $cfg fetch --quiet --depth 1 && git -C $cfg reset --hard --quiet FETCH_HEAD } || print -r -- "session-create: configs refresh skipped (dirty checkout or fetch failed); using the checked-out state" } && GITLAB_TOKEN="$(print -r -- "{{ secret (getenv \"GITLAB_TOKEN_SECRET_PATH\") }}" | render-tpl -f /dev/stdin)" che run --profiles sandbox-runtime'
+  'cd ~/.sandbox-che && cfg=~/projects/gitlab/konradodwrot/configs && { { [[ -z $(git -C $cfg status --porcelain) ]] && git -C $cfg fetch --quiet --depth 1 && git -C $cfg reset --hard --quiet FETCH_HEAD } || print -r -- "session-create: configs refresh skipped (dirty checkout or fetch failed); using the checked-out state" } && GITLAB_TOKEN="$(print -r -- "{{ secret (getenv \"GITLAB_TOKEN_SECRET_PATH\") }}" | che render tpl -f /dev/stdin)" che run --profiles sandbox-runtime'
 
 exec $kc exec -it $SESSION -- env "GCP_SA_KEY=$gcp_sa_key" su -w GCP_SA_KEY,OTEL_EXPORTER_OTLP_ENDPOINT,CHE_OTEL_ENDPOINT,OTEL_RESOURCE_ATTRIBUTES - ko
 ##[<] 🤖🤖🤖
