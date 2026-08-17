@@ -12,7 +12,10 @@ stages:
 #[why] all CI runs on the self-hosted GKE runners: no SaaS compute minutes remain. set once here so a
 #   new job inherits it instead of silently having no runner. jobs needing arm64 or another size
 #   override with their own tags
+#[why] a superseded pipeline holds pods for a commit nobody will merge: cancel it and let
+#   the autoscaler release the node. jobs with an external side effect opt out individually
 default:
+  interruptible: true
   #[why] spot nodes are preempted mid-job and the manager itself runs on spot: infrastructure
   #   failures are expected, not exceptional. 2 is gitlab's hard maximum, so 3 attempts in total.
   #   retries cover runner and API faults only, never a failing script

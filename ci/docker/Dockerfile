@@ -17,7 +17,7 @@ RUN set -eux; \
     esac; \
     che_base="https://gitlab.com/api/v4/projects/konradodwrot%2Fgo-modules/packages/generic/che/latest"; \
     curl -fsSL --connect-timeout 30 --retry 10 --retry-delay 30 --retry-all-errors -o /tmp/che.tar.gz "${che_base}/che_latest_${plat}.tar.gz"; \
-    tar -xz -C /usr/local/bin -f /tmp/che.tar.gz che render-tpl render-repo-group-index; \
+    tar -xz -C /usr/local/bin -f /tmp/che.tar.gz che; \
     rm /tmp/che.tar.gz
 
 ARG SANDBOX_USER=ko
@@ -29,15 +29,29 @@ WORKDIR /home/$SANDBOX_USER
 
 COPY --chown=$SANDBOX_USER ci/docker/che.yml /home/$SANDBOX_USER/.sandbox-che/che.yml
 
+#[why] two che runs, not one: the prose-authored payloads (agent docs, the AGENTS.md host template)
+#   are gitignored in configs and exist only once ontoRepo renders them, so a bare clone is missing
+#   files the llm/base profile then tries to load. checkout of CONFIGS_REF pins the tree the image
+#   is built from, which the clone alone did not do
+#
+#[why] ~/.local/bin on PATH: che symlinks the nvm-installed node there, then invokes npm by its
+#   absolute nvm path. npm's shebang is `env node`, so with that dir off PATH node was unresolvable
+#   and every global npm install (claude, codex) died with 127. a login shell has it, this RUN shell
+#   did not. it is also the dir che reports as "not on path" when picking a binaries destination
+ENV PATH=/home/$SANDBOX_USER/.local/bin:$PATH
+RUN mkdir -p /home/$SANDBOX_USER/.local/bin
+
 ARG CONFIGS_REF=main
 RUN set -eux; \
     : "${CONFIGS_REF}"; \
-    git clone --quiet --depth 1 --single-branch https://gitlab.com/konradodwrot/configs.git /home/$SANDBOX_USER/projects/gitlab/konradodwrot/configs; \
+    configs=/home/$SANDBOX_USER/projects/gitlab/konradodwrot/configs; \
+    git clone --quiet https://gitlab.com/konradodwrot/configs.git "$configs"; \
+    git -C "$configs" checkout --quiet "$CONFIGS_REF"; \
     git -C /home/$SANDBOX_USER/.sandbox-che init --quiet; \
     git -C /home/$SANDBOX_USER/.sandbox-che add che.yml; \
-    cd /home/$SANDBOX_USER/.sandbox-che; \
-    CI=1 container=docker CHE_OTEL_ENABLED=false CHE_VALIDATE_SPEC=error CHE_RENDER_TEMPLATES_SKIP_SECRETS=true CHE_ERREXIT=true \
-    che run --profiles sandbox-build
+    export CI=1 container=docker CHE_OTEL_ENABLED=false CHE_VALIDATE_SPEC=error CHE_RENDER_TEMPLATES_SKIP_SECRETS=true CHE_ERREXIT=true; \
+    (cd "$configs"; che run --profiles ontoRepo); \
+    (cd /home/$SANDBOX_USER/.sandbox-che; che run --profiles sandbox-build)
 
 CMD ["zsh", "-l"]
 ##[<] 🤖🤖
