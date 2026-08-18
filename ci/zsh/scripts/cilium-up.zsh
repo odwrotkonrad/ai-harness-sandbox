@@ -15,9 +15,7 @@ if ! cilium status --context kind-sandbox --wait=false >/dev/null 2>&1; then
     --set image.pullPolicy=IfNotPresent \
     --set kubeProxyReplacement=false \
     --set hubble.enabled=true \
-    --set hubble.relay.enabled=true \
-    --set hubble.metrics.enableOpenMetrics=true \
-    --set hubble.metrics.enabled="{flow:sourceContext=pod;destinationContext=dns,drop:sourceContext=pod;destinationContext=dns,dns:query;ignoreAAAA}"
+    --set hubble.relay.enabled=true
 fi
 
 cilium status --context kind-sandbox --wait

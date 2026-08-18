@@ -1,0 +1,57 @@
+##[>] 🤖🤖
+FROM debian:bookworm-slim
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates curl git gcc jq libc6-dev make perl procps python3 sudo vim zsh \
+ && rm -rf /var/lib/apt/lists/*
+
+#[why] built from source, not apt: bookworm's newest tmux is 3.5a (backports), while the host runs
+#   the current release. a session should present the tmux the user knows, so the version is pinned
+#   here and the build deps are dropped again to keep the layer small
+ARG TMUX_VERSION=3.7c
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends bison libevent-dev libncurses-dev pkg-config; \
+    curl -fsSL --connect-timeout 30 --retry 5 --retry-delay 10 --retry-all-errors \
+      -o /tmp/tmux.tar.gz "https://github.com/tmux/tmux/releases/download/${TMUX_VERSION}/tmux-${TMUX_VERSION}.tar.gz"; \
+    tar -xzf /tmp/tmux.tar.gz -C /tmp; \
+    cd "/tmp/tmux-${TMUX_VERSION}"; \
+    ./configure --prefix=/usr/local; \
+    make -j"$(nproc)"; \
+    make install; \
+    cd /; \
+    rm -rf "/tmp/tmux-${TMUX_VERSION}" /tmp/tmux.tar.gz; \
+    apt-get purge -y bison libevent-dev libncurses-dev pkg-config; \
+    apt-get install -y --no-install-recommends libevent-core-2.1-7 libncurses6; \
+    apt-get autoremove -y; \
+    rm -rf /var/lib/apt/lists/*; \
+    tmux -V
+
+ARG CHE_REF=latest
+RUN set -eux; \
+    : "${CHE_REF}"; \
+    arch="$(dpkg --print-architecture)"; \
+    case "$arch" in \
+      amd64) plat=linux_amd64 ;; \
+      arm64) plat=linux_arm64 ;; \
+      *) echo "unsupported arch: $arch" >&2; exit 1 ;; \
+    esac; \
+    che_base="https://gitlab.com/api/v4/projects/konradodwrot%2Fgo-modules/packages/generic/che/latest"; \
+    curl -fsSL --connect-timeout 30 --retry 10 --retry-delay 30 --retry-all-errors -o /tmp/che.tar.gz "${che_base}/che_latest_${plat}.tar.gz"; \
+    tar -xz -C /usr/local/bin -f /tmp/che.tar.gz che; \
+    rm /tmp/che.tar.gz
+
+ARG SANDBOX_USER=ko
+ARG SANDBOX_UID=1000
+RUN useradd -m -u "$SANDBOX_UID" -s /bin/zsh -G root "$SANDBOX_USER" \
+ && echo "$SANDBOX_USER ALL=(ALL) NOPASSWD: ALL" >"/etc/sudoers.d/$SANDBOX_USER"
+
+USER $SANDBOX_USER
+WORKDIR /home/$SANDBOX_USER
+
+ENV PATH=/home/$SANDBOX_USER/.local/bin:$PATH
+RUN mkdir -p /home/$SANDBOX_USER/.local/bin
+
+CMD ["zsh", "-l"]
+##[<] 🤖🤖

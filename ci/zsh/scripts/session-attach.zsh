@@ -4,38 +4,61 @@ emulate -LR zsh
 setopt errexit pipefail
 autoload -Uz fn-exit-with
 
-##[>] 🤖🤖🤖
-typeset -a kc=( kubectl --context kind-sandbox )
+##[>] 🤖🤖
+typeset repo_root=$(git -C ${0:A:h} rev-parse --show-toplevel)
+source $repo_root/ci/zsh/lib/session-lib.zsh
 
-(( $+commands[kubectl] )) || fn-exit-with 1 "${0:t}: kubectl not found"
+typeset -i include_stopped=0
+[[ ${1-} == --stopped || ${SESSION_STOPPED-} == 1 ]] && include_stopped=1
 
-if [[ -z ${SESSION-} ]] {
-  SESSION=$($kc get pods -l app=claude-sandbox --sort-by=.metadata.creationTimestamp -o name 2>/dev/null | tail -1 | cut -d/ -f2)
-  [[ -n $SESSION ]] || fn-exit-with 1 "${0:t}: no running session to attach to; use session-create"
+fn-sandbox-require ${0:t}
+
+${0:A:h}/bootstrap.zsh
+
+typeset target=${SESSION-}
+
+if [[ -z $target ]] {
+  typeset candidates
+  if (( include_stopped )) {
+    candidates=$(fn-sandbox-sessions)
+  } else {
+    candidates=$(fn-sandbox-running-sessions)
+  }
+
+  #[why] create, then carry on to the attach below: exec would replace this process and the caller
+  #   would be left with a created session they were never dropped into
+  if [[ -z $candidates ]] {
+    print -r -- "${0:t}: no session; creating one"
+    target=$(SESSION= ${0:A:h}/session-create.zsh | tee /dev/stderr | sed -n 's/.*session \(.*\) ready/\1/p')
+    [[ -n $target ]] || fn-exit-with 1 "${0:t}: session-create produced no session"
+  } else {
+    target=$(fn-sandbox-pick $candidates) \
+      || fn-exit-with 1 "${0:t}: no session picked"
+  }
 }
 
-$kc get pod $SESSION >/dev/null 2>&1 || fn-exit-with 1 "${0:t}: session $SESSION not running; use session-create"
+fn-sandbox-exists $target \
+  || fn-exit-with 1 "${0:t}: session $target does not exist; use session-create"
 
-typeset tag=${SANDBOX_TAG:-latest}
-[[ $(uname -m) == (arm64|aarch64) ]] && tag+=-arm64
-typeset image=registry.gitlab.com/konradodwrot/infra/sandbox/sandbox:$tag
-typeset pod_digest=$($kc get pod $SESSION -o jsonpath='{.status.containerStatuses[0].imageID}' 2>/dev/null)
-pod_digest=${pod_digest##*@}
-typeset remote_digest=''
-if { (( $+commands[docker] )) && (( $+commands[yq] )) } {
-  remote_digest=$(docker manifest inspect -v $image 2>/dev/null | yq -p json '.Descriptor.digest' 2>/dev/null) || remote_digest=''
-}
-if [[ -z $remote_digest || $remote_digest == null ]] {
-  print -r -- "${0:t}: could not verify image freshness against $image"
-} elif [[ $pod_digest != $remote_digest ]] {
-  print -r -- "${0:t}: pod image is not the newest published $image; update: make session-stop session-create SESSION=$SESSION (home diff survives)"
+if [[ $($SANDBOX_KC get statefulset $target -o jsonpath='{.spec.replicas}') == 0 ]] {
+  print -r -- "${0:t}: session $target is stopped; starting it"
+  $SANDBOX_KC scale statefulset/$target --replicas=1 >/dev/null
 }
 
-typeset gcp_sa_key=${GCP_SA_KEY-}
-if { [[ -z $gcp_sa_key ]] && (( $+commands[op] )) } {
-  gcp_sa_key=$(op read 'op://SandboxProgrammaticAccess/sandbox-gcp-sa/keys/sa_key' 2>/dev/null) || gcp_sa_key=''
-}
-[[ -n $gcp_sa_key ]] || fn-exit-with 1 "${0:t}: no GCP SA key (op://SandboxProgrammaticAccess/sandbox-gcp-sa/keys/sa_key empty); the pod's ADC identity is required"
+$SANDBOX_KC rollout status statefulset/$target --timeout=900s >/dev/null
 
-exec $kc exec -it $SESSION -- env "GCP_SA_KEY=$gcp_sa_key" su -w GCP_SA_KEY,OTEL_EXPORTER_OTLP_ENDPOINT,CHE_OTEL_ENDPOINT,OTEL_RESOURCE_ATTRIBUTES - ko
-##[<] 🤖🤖🤖
+#[why] kubectl exec carries no TERM, so tmux cannot tell the client is utf8 capable and degrades
+#   every multibyte glyph: accents become underscores and box drawing becomes solid blocks. -u
+#   asserts utf8 rather than leaving tmux to guess, and TERM travels so colours and keys work too
+#[why] the base image carries kitty-terminfo and ncurses-term so the host's own TERM travels intact,
+#   which is what keeps the session's capabilities identical to the terminal driving it. the probe
+#   stays for the terminal nobody packaged: tmux exits with "missing or unsuitable terminal" rather
+#   than starting, and a lesser TERM beats no session at all
+typeset term=${TERM:-xterm-256color}
+$SANDBOX_KC exec ${target}-0 -c sandbox -- infocmp $term >/dev/null 2>&1 \
+  || term=xterm-256color
+
+exec $SANDBOX_KC exec -it ${target}-0 -c sandbox -- \
+  env TERM=$term LANG=${LANG:-C.UTF-8} \
+  tmux -u new-session -A -s main
+##[<] 🤖🤖

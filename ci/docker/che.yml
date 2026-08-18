@@ -1,24 +1,13 @@
 # yaml-language-server: $schema=https://gitlab.com/konradodwrot/go-modules/-/raw/main/che/assets/data/che.schema.json
 ##[>] 🤖🤖
-sandbox-build:
+sandbox-image:
   include:
     profiles:
-      - source: "~/projects/gitlab/konradodwrot/configs/profiles/shell/zsh/base/che.yml::shell/zsh/base-linux"
-      - source: "~/projects/gitlab/konradodwrot/configs/profiles/git/che.yml::git"
-      - source: "~/projects/gitlab/konradodwrot/configs/profiles/llm/base/che.yml::llm/base"
-      - source: "~/projects/gitlab/konradodwrot/configs/profiles/llm/claude/che.yml::llm/claude"
-      - source: "~/projects/gitlab/konradodwrot/configs/profiles/dev/ruby/che.yml::dev/ruby"
-      - source: "~/projects/gitlab/konradodwrot/configs/profiles/llm/codex/che.yml::llm/codex"
-      - source: "~/projects/gitlab/konradodwrot/configs/profiles/cloud/gcp/che.yml::cloud/gcp/install"
-      - source: "~/projects/gitlab/konradodwrot/configs/profiles/gitlab/glab/che.yml::gitlab/glab"
-      - source: "~/projects/gitlab/konradodwrot/configs/profiles/misc/ssh/che.yml::misc/ssh"
-
-sandbox-runtime:
-  include:
-    profiles:
-      - source: "~/projects/gitlab/konradodwrot/configs/profiles/cloud/gcp/che.yml::cloud/gcp/auth"
-      - source: "~/projects/gitlab/konradodwrot/configs/profiles/misc/ssh/che.yml::misc/ssh/virt"
-      - source: "@https://gitlab.com/konradodwrot/control//workspace/che.yml::gitlab/projects"
-        env:
-          GITLAB_GROUPS: "konradodwrot:konradodwrot"
+      - source: "@https://gitlab.com/konradodwrot/configs//profiles/dev/che.yml::dev/virt/linux"
+      - source: "@https://gitlab.com/konradodwrot/configs//profiles/shell/che.yml::shell/virt/linux"
+      - source: "@https://gitlab.com/konradodwrot/configs//profiles/llm/che.yml::llm/virt/linux"
+      - source: "@https://gitlab.com/konradodwrot/configs//profiles/cloud/che.yml::cloud/virt/linux"
+      - source: "@https://gitlab.com/konradodwrot/configs//profiles/misc/che.yml::misc/virt/linux"
+      - source: "@https://gitlab.com/konradodwrot/configs//profiles/git/che.yml::git/virt/linux"
+      - source: "@https://gitlab.com/konradodwrot/configs//profiles/gitlab/che.yml::gitlab/virt/linux"
 ##[<] 🤖🤖

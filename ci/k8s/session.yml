@@ -1,39 +1,86 @@
 ##[>] 🤖🤖🤖
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: sandbox-home
-  labels: {app: claude-sandbox}
-spec:
-  accessModes: [ReadWriteOnce]
-  resources: {requests: {storage: 16Gi}}
----
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: StatefulSet
 metadata:
   name: "${SESSION}"
   labels: {app: claude-sandbox, session: "${SESSION}"}
 spec:
-  restartPolicy: Always
-  containers:
-    - name: sandbox
-      image: localhost:5001/sandbox:local
-      imagePullPolicy: Always
-      env:
-        - {name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://sandbox-otelcol:4317"}
-        - {name: CHE_OTEL_ENDPOINT, value: "sandbox-otelcol:4317"}
-        - {name: OTEL_RESOURCE_ATTRIBUTES, value: "session.name=${SESSION},service.namespace=sandbox"}
-      securityContext: {privileged: true, runAsUser: 0}
-      command:
-        - sh
-        - -c
-        - |
-          mkdir -p "/mnt/home/${SESSION}/upper" "/mnt/home/${SESSION}/work"
-          chown ko:ko "/mnt/home/${SESSION}/upper"
-          mount -t overlay overlay -o "lowerdir=/home/ko,upperdir=/mnt/home/${SESSION}/upper,workdir=/mnt/home/${SESSION}/work" /home/ko
-          exec sleep infinity
-      volumeMounts: [{name: home, mountPath: /mnt/home}]
-  volumes:
-    - name: home
-      persistentVolumeClaim: {claimName: sandbox-home}
+  replicas: 1
+  serviceName: "${SESSION}"
+  selector:
+    matchLabels: {app: claude-sandbox, session: "${SESSION}"}
+  template:
+    metadata:
+      labels: {app: claude-sandbox, session: "${SESSION}"}
+      annotations:
+        sandbox/image-digest: "${SANDBOX_IMAGE_DIGEST}"
+    spec:
+      nodeSelector:
+        sandbox.role: session
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        runAsNonRoot: true
+      initContainers:
+        - name: seed-home
+          image: localhost:5001/sandbox:local
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          #[why] the marker records which image the home came from, not merely that it came from one:
+          #   a pod re-pulls on every start, so its running image is always current while its home
+          #   stays as first seeded. only the recorded digest tells the two apart
+          env:
+            - name: SEED_DIGEST
+              valueFrom:
+                fieldRef:
+                  fieldPath: "metadata.annotations['sandbox/image-digest']"
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -e /mnt/home/.sandbox-seeded ]; then
+                cp -a /home/ko/. /mnt/home/
+                printf '%s\n' "${SEED_DIGEST:-unknown}" >/mnt/home/.sandbox-seeded
+              fi
+          volumeMounts: [{name: home, mountPath: /mnt/home}]
+      containers:
+        - name: sandbox
+          image: localhost:5001/sandbox:local
+          imagePullPolicy: Always
+          #[why] sudo is a setuid binary, so it needs escalation allowed and SETUID/SETGID kept.
+          #   the spec requires passwordless sudo: an unattended agent must never stall on a
+          #   permission. the boundary is the pod, not the account, and root in a pod that drops
+          #   every other capability reaches nothing outside it
+          securityContext:
+            allowPrivilegeEscalation: true
+            capabilities:
+              drop: [ALL]
+              add: [SETUID, SETGID, CHOWN, DAC_OVERRIDE, FOWNER]
+          env:
+            - {name: GOOGLE_APPLICATION_CREDENTIALS, value: "/home/ko/.config/gcloud/sandbox-sa.json"}
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: "2", memory: 3Gi}
+          #[why] the pod holds the server open by waiting on a channel nobody ever signals, so the
+          #   socket keeps answering without a client sitting in `main`. waiting on the session
+          #   itself would attach one, and an operator running `new-session -A` would then land in a
+          #   terminal shared with the pod rather than one of their own
+          command:
+            - zsh
+            - -lc
+            - |
+              tmux new-session -d -s main
+              exec tmux wait-for sandbox-pod-hold
+          volumeMounts: [{name: home, mountPath: /home/ko}]
+      volumes: []
+  volumeClaimTemplates:
+    - metadata:
+        name: home
+        labels: {app: claude-sandbox, session: "${SESSION}"}
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources: {requests: {storage: 16Gi}}
 ##[<] 🤖🤖🤖

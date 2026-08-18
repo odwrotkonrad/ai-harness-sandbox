@@ -4,29 +4,50 @@ emulate -LR zsh
 setopt errexit pipefail
 autoload -Uz fn-exit-with
 
-##[>] 🤖🤖🤖
-typeset -a kc=( kubectl --context kind-sandbox )
+##[>] 🤖🤖
+typeset repo_root=$(git -C ${0:A:h} rev-parse --show-toplevel)
+source $repo_root/ci/zsh/lib/session-lib.zsh
 
-(( $+commands[kubectl] )) || fn-exit-with 1 "${0:t}: kubectl not found"
+typeset -i include_stopped=0
+[[ ${1-} == --stopped || ${SESSION_STOPPED-} == 1 ]] && include_stopped=1
 
-print 'RUNNING SESSIONS'
-$kc get pods -l app=claude-sandbox 2>/dev/null
+fn-sandbox-require ${0:t}
 
-print '\nSESSION HOME DIFFS (running + stopped)'
-typeset lister=session-ls-$(date +%s)
-$kc run $lister --restart=Never --image=localhost:5001/sandbox:local --attach=false --overrides='{
-  "spec": {
-    "containers": [{
-      "name": "ls",
-      "image": "localhost:5001/sandbox:local",
-      "imagePullPolicy": "IfNotPresent",
-      "command": ["sh", "-c", "d=$(du -sh /mnt/home/* 2>/dev/null); [ -n \"$d\" ] && echo \"$d\" || echo none"],
-      "volumeMounts": [{"name": "home", "mountPath": "/mnt/home"}]
-    }],
-    "volumes": [{"name": "home", "persistentVolumeClaim": {"claimName": "sandbox-home"}}]
+#[why] a pod re-pulls on every start, so its running image is always current: what goes stale is the
+#   home, seeded once and never again. HOME compares the digest recorded at seeding against the
+#   image a new session would get, which is the difference that decides whether a rebuild reached it
+typeset -a rows=( 'SESSION STATE DISK HOME' )
+typeset name replicas state disk seeded home
+typeset current=$(fn-sandbox-image-digest)
+
+for name in ${(f)"$(fn-sandbox-sessions)"}; do
+  replicas=$($SANDBOX_KC get statefulset $name -o jsonpath='{.spec.replicas}' 2>/dev/null)
+  if [[ $replicas == 0 ]] {
+    (( include_stopped )) || continue
+    state=stopped
+  } else {
+    state=running
   }
-}' >/dev/null
-$kc wait --for=jsonpath='{.status.phase}'=Succeeded pod/$lister --timeout=30s >/dev/null 2>&1 || true
-$kc logs $lister 2>/dev/null
-$kc delete pod $lister --wait=false >/dev/null 2>&1
-##[<] 🤖🤖🤖
+
+  disk=$($SANDBOX_KC get pvc home-${name}-0 -o jsonpath='{.status.capacity.storage}' 2>/dev/null)
+
+  seeded=$($SANDBOX_KC get statefulset $name \
+    -o jsonpath='{.spec.template.metadata.annotations.sandbox/image-digest}' 2>/dev/null)
+  if [[ -z $current || -z $seeded ]] {
+    home=unknown
+  } elif [[ $seeded == $current ]] {
+    home=current
+  } else {
+    home=stale
+  }
+
+  rows+=( "$name ${state} ${disk:-unknown} ${home}" )
+done
+
+(( $#rows > 1 )) || { print -r -- 'no sessions'; return 0 }
+print -rl -- $rows | column -t
+if [[ $rows == *stale* ]] {
+  print -r -- ''
+  print -r -- 'stale: the home predates the current config image; only a new session picks the rebuild up'
+}
+##[<] 🤖🤖

@@ -4,28 +4,21 @@ emulate -LR zsh
 setopt errexit pipefail
 autoload -Uz fn-exit-with
 
-##[>] 🤖🤖🤖
-typeset -a kc=( kubectl --context kind-sandbox )
+##[>] 🤖🤖
+typeset repo_root=$(git -C ${0:A:h} rev-parse --show-toplevel)
+source $repo_root/ci/zsh/lib/session-lib.zsh
 
-(( $+commands[kubectl] )) || fn-exit-with 1 "${0:t}: kubectl not found"
-[[ -n ${SESSION-} ]] || fn-exit-with 1 "${0:t}: SESSION required"
+fn-sandbox-require ${0:t}
 
-$kc delete pod $SESSION --ignore-not-found
+typeset target=${SESSION-}
+[[ -n $target ]] || target=$(fn-sandbox-pick "$(fn-sandbox-sessions)") \
+  || fn-exit-with 1 "${0:t}: no session to remove"
 
-typeset remover=${SESSION}-rm
-$kc run $remover --restart=Never --image=localhost:5001/sandbox:local --attach=false --overrides='{
-  "spec": {
-    "containers": [{
-      "name": "rm",
-      "image": "localhost:5001/sandbox:local",
-      "imagePullPolicy": "IfNotPresent",
-      "securityContext": {"privileged": true, "runAsUser": 0},
-      "command": ["sh", "-c", "rm -rf /mnt/home/'$SESSION'"],
-      "volumeMounts": [{"name": "home", "mountPath": "/mnt/home"}]
-    }],
-    "volumes": [{"name": "home", "persistentVolumeClaim": {"claimName": "sandbox-home"}}]
-  }
-}' >/dev/null
-$kc wait --for=jsonpath='{.status.phase}'=Succeeded pod/$remover --timeout=30s >/dev/null 2>&1 || true
-$kc delete pod $remover --wait=false >/dev/null 2>&1
-##[<] 🤖🤖🤖
+fn-sandbox-exists $target \
+  || fn-exit-with 1 "${0:t}: session $target does not exist"
+
+$SANDBOX_KC delete statefulset $target --cascade=foreground --ignore-not-found
+$SANDBOX_KC delete pvc home-${target}-0 --ignore-not-found
+
+print -r -- "${0:t}: session $target and its data removed"
+##[<] 🤖🤖
