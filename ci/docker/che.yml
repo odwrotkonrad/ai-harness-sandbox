@@ -3,6 +3,7 @@
 sandbox-image:
   include:
     profiles:
+      - source: "@https://gitlab.com/konradodwrot/configs//che.yml::base/packages"
       - source: "@https://gitlab.com/konradodwrot/configs//profiles/dev/che.yml::dev/virt/linux"
       - source: "@https://gitlab.com/konradodwrot/configs//profiles/shell/che.yml::shell/virt/linux"
       - source: "@https://gitlab.com/konradodwrot/configs//profiles/llm/che.yml::llm/virt/linux"

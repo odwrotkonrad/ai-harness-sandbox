@@ -45,7 +45,18 @@ spec:
                 cp -a /home/ko/. /mnt/home/
                 printf '%s\n' "${SEED_DIGEST:-unknown}" >/mnt/home/.sandbox-seeded
               fi
-          volumeMounts: [{name: home, mountPath: /mnt/home}]
+              #[why] no shell variables here: session-create pipes this manifest through
+              #   `yq ... |= envsubst`, which expands every $name before the pod ever sees it
+              if [ -d /run/sandbox-ssh ]; then
+                mkdir -p /mnt/home/.ssh
+                cp -rL /run/sandbox-ssh/. /mnt/home/.ssh/ 2>/dev/null || true
+                chmod 700 /mnt/home/.ssh
+                chmod 600 /mnt/home/.ssh/id_signing 2>/dev/null || true
+                chmod 644 /mnt/home/.ssh/id_signing.pub 2>/dev/null || true
+              fi
+          volumeMounts:
+            - {name: home, mountPath: /mnt/home}
+            - {name: sandbox-ssh, mountPath: /run/sandbox-ssh, readOnly: true}
       containers:
         - name: sandbox
           image: localhost:5001/sandbox:local
@@ -75,7 +86,14 @@ spec:
               tmux new-session -d -s main
               exec tmux wait-for sandbox-pod-hold
           volumeMounts: [{name: home, mountPath: /home/ko}]
-      volumes: []
+      volumes:
+        #[why] the keys ride a secret, not the image: the image is pushed to a registry and every
+        #   session pulls it, so a key baked into a layer is a key handed to anything that can pull
+        - name: sandbox-ssh
+          secret:
+            secretName: sandbox-ssh-keys
+            optional: true
+            defaultMode: 0600
   volumeClaimTemplates:
     - metadata:
         name: home

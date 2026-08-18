@@ -23,6 +23,8 @@ export SESSION=${SESSION:-$(fn-sandbox-new-name ${0:t})}
 fn-sandbox-exists $SESSION \
   && fn-exit-with 1 "${0:t}: session $SESSION already exists; use session-attach"
 
+${0:A:h}/session-ssh-keys-upsert.zsh
+
 export SANDBOX_IMAGE_DIGEST=$(fn-sandbox-image-digest)
 
 yq '(.. | select(tag == "!!str")) |= envsubst' $repo_root/ci/k8s/session.yml | $SANDBOX_KC apply -f -
