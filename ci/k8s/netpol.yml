@@ -2,6 +2,39 @@
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
+  name: sandbox-default-deny
+spec:
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s:k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - {port: "53", protocol: UDP}
+            - {port: "53", protocol: TCP}
+          rules:
+            dns:
+              - matchName: api.anthropic.com
+              - matchPattern: "*.anthropic.com"
+              - matchName: platform.claude.com
+              - matchPattern: "*.claude.com"
+              - matchPattern: "*.statsig.com"
+              - matchPattern: "*.sentry.io"
+              - matchName: gitlab.com
+              - matchName: registry.gitlab.com
+              - matchName: github.com
+              - matchName: api.github.com
+              - matchPattern: "*.githubusercontent.com"
+              - matchName: proxy.golang.org
+              - matchName: sum.golang.org
+              - matchPattern: "*.1password.com"
+              - matchPattern: "*.googleapis.com"
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
   name: sandbox-egress
 spec:
   endpointSelector:
@@ -17,15 +50,28 @@ spec:
             - {port: "53", protocol: TCP}
           rules:
             dns:
-              - matchPattern: "*"
-    - toEndpoints:
-        - matchLabels: {app: sandbox-otelcol}
-      toPorts:
-        - ports:
-            - {port: "4317", protocol: TCP}
+              - matchName: api.anthropic.com
+              - matchPattern: "*.anthropic.com"
+              - matchName: platform.claude.com
+              - matchPattern: "*.claude.com"
+              - matchPattern: "*.statsig.com"
+              - matchPattern: "*.sentry.io"
+              - matchName: gitlab.com
+              - matchName: registry.gitlab.com
+              - matchName: github.com
+              - matchName: api.github.com
+              - matchPattern: "*.githubusercontent.com"
+              - matchName: proxy.golang.org
+              - matchName: sum.golang.org
+              - matchPattern: "*.1password.com"
+              - matchPattern: "*.googleapis.com"
     - toFQDNs:
         - {matchName: api.anthropic.com}
         - {matchPattern: "*.anthropic.com"}
+        - {matchName: platform.claude.com}
+        - {matchPattern: "*.claude.com"}
+        - {matchPattern: "*.statsig.com"}
+        - {matchPattern: "*.sentry.io"}
         - {matchName: gitlab.com}
         - {matchName: registry.gitlab.com}
         - {matchName: github.com}
@@ -43,4 +89,14 @@ spec:
       toPorts:
         - ports:
             - {port: "22", protocol: TCP}
+---
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: sandbox-host-deny
+spec:
+  endpointSelector:
+    matchLabels: {app: claude-sandbox}
+  egressDeny:
+    - toEntities: [host, remote-node]
 ##[<] 🤖🤖🤖

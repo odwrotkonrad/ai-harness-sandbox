@@ -1,0 +1,33 @@
+##[>] 🤖🤖
+#[why] limits.* are deliberately oversubscribed against the vm's 6 cpu / 8 gb: quota counts a pod's
+#   limit, not its use, and sessions are bursty and mostly idle. requests.* is what actually reserves,
+#   so it stays small enough that several sessions schedule and none starves another
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: sandbox-quota
+spec:
+  hard:
+    requests.cpu: "2"
+    requests.memory: 2Gi
+    limits.cpu: "12"
+    limits.memory: 16Gi
+    persistentvolumeclaims: "16"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: sandbox-limits
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: "2"
+        memory: 3Gi
+      defaultRequest:
+        cpu: 100m
+        memory: 256Mi
+      max:
+        cpu: "3"
+        memory: 4Gi
+##[<] 🤖🤖

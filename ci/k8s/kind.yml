@@ -7,6 +7,8 @@ networking:
 nodes:
   - role: control-plane
   - role: worker
+    labels:
+      sandbox.role: session
 containerdConfigPatches:
   - |-
     [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]

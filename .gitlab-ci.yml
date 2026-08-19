@@ -2,11 +2,9 @@
 workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $BUILD_SANDBOX_IMAGE
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 stages:
-  - build-image
   - validate
 
 #[why] all CI runs on the self-hosted GKE runners: no SaaS compute minutes remain. set once here so a
@@ -31,70 +29,28 @@ default:
     - gke-linux-amd64
 
 variables:
-  CI_IMAGE: registry.gitlab.com/konradodwrot/infra/oci-images/ci-linux:latest
-  SANDBOX_IMAGE: $CI_REGISTRY_IMAGE/sandbox
+  CI_IMAGE: $GRP_VAR_ARTIFACT_REGISTRY/ci-linux:$GRP_VAR_CI_IMAGES_REF
 
-.build-image:
-  stage: build-image
-  image: docker:27-cli
-  services:
-    - docker:27-dind
-  variables:
-    DOCKER_HOST: tcp://docker:2376
-    DOCKER_TLS_CERTDIR: "/certs"
-    DOCKER_CERT_PATH: "/certs/client"
-    DOCKER_TLS_VERIFY: "1"
-  rules:
-    - if: $CI_MERGE_REQUEST_DRAFT == "true"
-      when: never
-    - if: $BUILD_SANDBOX_IMAGE
-    - changes:
-        - ci/docker/**/*
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-    - when: manual
-      allow_failure: true
-  before_script:
-    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
-    - docker context create dind --docker "host=$DOCKER_HOST,ca=$DOCKER_CERT_PATH/ca.pem,cert=$DOCKER_CERT_PATH/cert.pem,key=$DOCKER_CERT_PATH/key.pem"
-    - docker buildx create --use --driver docker-container dind
-    - CHE_REF="$(wget -S --spider -q -O /dev/null "https://gitlab.com/api/v4/projects/konradodwrot%2Fgo-modules/packages/generic/che/latest/che_latest_linux_amd64.tar.gz" 2>&1 | tr -d '\r' | awk 'tolower($1)=="etag:"{print $2}')"
-    - CONFIGS_REF="$(wget -qO- 'https://gitlab.com/api/v4/projects/konradodwrot%2Fconfigs/repository/commits?path=profiles&per_page=1' | sed -n 's/.*"id":"\([0-9a-f]*\)".*/\1/p')"
-
-build-sandbox-image-amd64:
-  extends: .build-image
+#[why] CI validates, it does not build: both images are built on the host that runs the cluster,
+#   so a dry run catches a broken profile without producing an image nothing would pull
+validate-che-profiles:
+  stage: validate
   needs: []
+  image: $CI_IMAGE
+  #[why] copied to /tmp, outside the checkout: -C changes directory but che then resolves the
+  #   enclosing repo, so any path inside this one loads the root che.yml (ontoRepo, claude-agents,
+  #   not sandbox-image). the image build hits this spec at ~/.sandbox-che, outside any repo, so
+  #   validating a copy the same way matches how it is actually used
   script:
-    - docker buildx build
-        --file "$CI_PROJECT_DIR/ci/docker/Dockerfile"
-        --platform linux/amd64
-        --build-arg "CHE_REF=$CHE_REF"
-        --build-arg "CONFIGS_REF=$CONFIGS_REF"
-        --tag "$SANDBOX_IMAGE:latest"
-        --tag "$SANDBOX_IMAGE:$CI_COMMIT_SHORT_SHA"
-        --push
-        "$CI_PROJECT_DIR"
-
-build-sandbox-image-arm64:
-  extends: .build-image
-  tags: [gke-linux-arm64]
-  needs: []
-  script:
-    - docker buildx build
-        --file "$CI_PROJECT_DIR/ci/docker/Dockerfile"
-        --platform linux/arm64
-        --build-arg "CHE_REF=$CHE_REF"
-        --build-arg "CONFIGS_REF=$CONFIGS_REF"
-        --tag "$SANDBOX_IMAGE:latest-arm64"
-        --tag "$SANDBOX_IMAGE:$CI_COMMIT_SHORT_SHA-arm64"
-        --push
-        "$CI_PROJECT_DIR"
+    - mkdir -p /tmp/sandbox-che
+    - cp ci/docker/che.yml /tmp/sandbox-che/che.yml
+    - che run --profiles sandbox-image --dry-run all --validate-spec error
+        -C /tmp/sandbox-che
 
 validate-pre-commit-all:
   stage: validate
   needs: []
   rules:
-    - if: $BUILD_SANDBOX_IMAGE
-      when: never
     - when: on_success
   image: $CI_IMAGE
   script:

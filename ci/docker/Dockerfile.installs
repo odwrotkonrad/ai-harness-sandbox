@@ -1,0 +1,18 @@
+##[>] 🤖🤖
+ARG BASE_IMAGE=localhost:5001/sandbox-base:local
+FROM ${BASE_IMAGE}
+
+ARG SANDBOX_USER=ko
+COPY --chown=$SANDBOX_USER ci/docker/che.yml /home/$SANDBOX_USER/.sandbox-che/che.yml
+
+ARG CONFIGS_REF=main
+RUN set -eux; \
+    : "${CONFIGS_REF}"; \
+    #[why] no backups: an archive of this layer's dests is discarded with the layer that holds it
+    export CI=1 container=podman CHE_OTEL_ENABLED=false CHE_VALIDATE_SPEC=error CHE_ERREXIT=true CHE_BACKUP_AUTO_CREATE=false; \
+    cd /home/$SANDBOX_USER/.sandbox-che; \
+    git init --quiet; \
+    git add che.yml; \
+    che run --profiles sandbox-image \
+      --skip-ops prune-broken-links,make-dirs,make-links,make-copies,render-templates,run-scripts
+##[<] 🤖🤖
