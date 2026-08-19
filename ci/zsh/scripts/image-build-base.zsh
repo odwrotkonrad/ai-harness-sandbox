@@ -11,11 +11,11 @@ typeset repo_root=$(git -C ${0:A:h} rev-parse --show-toplevel)
 
 ${0:A:h}/machine-up.zsh
 
-typeset che_ref=$(curl --connect-timeout 30 --retry 10 --retry-delay 30 -fsSI "https://gitlab.com/api/v4/projects/konradodwrot%2Fgo-modules/packages/generic/che/latest/che_latest_linux_$(uname -m | sed 's/aarch64\|arm64/arm64/;s/x86_64/amd64/').tar.gz" | tr -d '\r' | awk 'tolower($1)=="etag:"{print $2}')
-
+#[why] the Dockerfile pins CHE_REF to a released version: "latest" is a stale package nothing
+#   republishes, so it holds a build predating schema features the configs profiles use. leaving
+#   CHE_REF unset here keeps that pin as the single place the version is declared
 podman build \
   --file $repo_root/ci/docker/Dockerfile.base \
-  --build-arg CHE_REF=${che_ref:-latest} \
   --tag localhost:5001/sandbox-base:local \
   $repo_root
 

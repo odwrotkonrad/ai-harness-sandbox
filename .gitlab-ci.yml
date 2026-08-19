@@ -29,7 +29,7 @@ default:
     - gke-linux-amd64
 
 variables:
-  CI_IMAGE: registry.gitlab.com/konradodwrot/infra/oci-images/ci-linux:latest
+  CI_IMAGE: $GRP_VAR_ARTIFACT_REGISTRY/ci-linux:$GRP_VAR_CI_IMAGES_REF
 
 #[why] CI validates, it does not build: both images are built on the host that runs the cluster,
 #   so a dry run catches a broken profile without producing an image nothing would pull

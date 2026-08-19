@@ -28,7 +28,11 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*; \
     tmux -V
 
-ARG CHE_REF=latest
+#[why] a pinned version, not the "latest" package: nothing in the che release flow republishes
+#   "latest", so it holds a build from 2026-08-15 that predates schema features the configs
+#   profiles now use (installPackages object form, checksum, onlyInstallationMethods), and the
+#   image bake fails validating them. bump this the way every other cross-repo pin is bumped
+ARG CHE_REF=0.0.83
 RUN set -eux; \
     : "${CHE_REF}"; \
     arch="$(dpkg --print-architecture)"; \
@@ -37,8 +41,8 @@ RUN set -eux; \
       arm64) plat=linux_arm64 ;; \
       *) echo "unsupported arch: $arch" >&2; exit 1 ;; \
     esac; \
-    che_base="https://gitlab.com/api/v4/projects/konradodwrot%2Fgo-modules/packages/generic/che/latest"; \
-    curl -fsSL --connect-timeout 30 --retry 10 --retry-delay 30 --retry-all-errors -o /tmp/che.tar.gz "${che_base}/che_latest_${plat}.tar.gz"; \
+    che_base="https://gitlab.com/api/v4/projects/konradodwrot%2Fgo-modules/packages/generic/che/${CHE_REF}"; \
+    curl -fsSL --connect-timeout 30 --retry 10 --retry-delay 30 --retry-all-errors -o /tmp/che.tar.gz "${che_base}/che_${CHE_REF}_${plat}.tar.gz"; \
     tar -xz -C /usr/local/bin -f /tmp/che.tar.gz che; \
     rm /tmp/che.tar.gz
 

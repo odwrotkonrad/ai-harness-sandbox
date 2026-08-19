@@ -6,6 +6,8 @@ upstream:
   - prose/license
   - configs/llm/claude
   - infra/oci-images/ci-linux
+  - infra/iac/ci-var/artifact-registry
+  - infra/iac/ci-var/ci-images-ref
 edges:
   configs/llm/claude: [sandbox]
   go-modules/che: [sandbox]
