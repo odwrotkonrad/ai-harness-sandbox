@@ -37,9 +37,15 @@ validate-che-profiles:
   stage: validate
   needs: []
   image: $CI_IMAGE
+  #[why] copied to /tmp, outside the checkout: -C changes directory but che then resolves the
+  #   enclosing repo, so any path inside this one loads the root che.yml (ontoRepo, claude-agents,
+  #   not sandbox-image). the image build hits this spec at ~/.sandbox-che, outside any repo, so
+  #   validating a copy the same way matches how it is actually used
   script:
+    - mkdir -p /tmp/sandbox-che
+    - cp ci/docker/che.yml /tmp/sandbox-che/che.yml
     - che run --profiles sandbox-image --dry-run all --validate-spec error
-        -C "$CI_PROJECT_DIR/ci/docker"
+        -C /tmp/sandbox-che
 
 validate-pre-commit-all:
   stage: validate
