@@ -3,12 +3,19 @@ SHELL := zsh
 .SHELLFLAGS := -c
 export PATH := $(CURDIR)/ci/zsh/scripts:$(PATH)
 
-WRAPPERS := all all-scratch
+WRAPPERS := repo-prepare-dev-env all all-scratch
 COMMANDS := render-templates repo-ci-prepare-hooks repo-ci-precommit-all bootstrap machine-up image-build-base image-build-installs image-build-config prune registry-up cluster-up cluster-down cilium-up netpol-up egress-denied session-create session-attach session-stop session-rm session-ls session-rename session-update-config test-e2e
 
 .PHONY: $(WRAPPERS) $(COMMANDS)
 
 .DEFAULT_GOAL := all
+
+##[>] Dev Environment [genai-include]
+#[why] render precedes hooks: the docsgen pre-commit hook runs render-templates and fails on drift,
+#   so a fresh clone whose generated files were never rendered would fail its first commit
+#[what] make a fresh clone a working checkout: generated docs, git hooks
+repo-prepare-dev-env: render-templates repo-ci-prepare-hooks
+##[<] Dev Environment
 
 ##[>] Environment Variables [genai-include]
 #[what] session name (statefulset + pvc); unset on session-create -> a random mnemonic, unset on session-attach/stop/rm -> picked
