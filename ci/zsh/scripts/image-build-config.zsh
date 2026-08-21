@@ -7,17 +7,20 @@ autoload -Uz fn-exit-with
 ##[>] 🤖🤖
 typeset repo_root=$(git -C ${0:A:h} rev-parse --show-toplevel)
 typeset tmp=$repo_root/.user/claude/tmp
-typeset claude_creds=$tmp/claude-credentials.json
-typeset claude_onboarding=$tmp/claude-onboarding.json
-typeset gcp_key=$tmp/gcp-sa-key.json
-typeset gitlab_token=$tmp/gitlab-token
+mkdir -p $tmp
+typeset context=$(mktemp -d $tmp/image-build-config.XXXXXX)
+typeset claude_creds=$context/claude-credentials.json
+typeset claude_onboarding=$context/claude-onboarding.json
+typeset gcp_key=$context/gcp-sa-key.json
+typeset gitlab_token=$context/gitlab-token
 
 (( $+commands[podman] )) || fn-exit-with 1 "${0:t}: podman not found"
 
 ${0:A:h}/machine-up.zsh
 
-mkdir -p $tmp
-trap 'rm -f $claude_creds $claude_onboarding $gcp_key $gitlab_token 2>/dev/null' EXIT
+trap 'rm -rf $context 2>/dev/null' EXIT
+mkdir -p $context/ci/docker
+cp $repo_root/ci/docker/Dockerfile.config $repo_root/ci/docker/merge-claude-onboarding.py $context/ci/docker/
 
 ${0:A:h}/claude-auth-capture.zsh $claude_creds
 ${0:A:h}/claude-onboarding-capture.zsh $claude_onboarding
@@ -53,7 +56,7 @@ typeset configs_ref="$(curl --connect-timeout 30 --retry 10 --retry-delay 30 --r
 typeset secrets_digest=$(cat $claude_creds $claude_onboarding $gcp_key $gitlab_token | shasum -a 256 | cut -d' ' -f1)
 
 podman build \
-  --file $repo_root/ci/docker/Dockerfile.config \
+  --file $context/ci/docker/Dockerfile.config \
   --build-arg INSTALLS_IMAGE=localhost:5001/sandbox-installs:local \
   --build-arg CONFIGS_REF=${configs_ref:-main} \
   --build-arg SECRETS_DIGEST=$secrets_digest \
@@ -62,7 +65,7 @@ podman build \
   --secret id=gcp_sa_key,src=$gcp_key \
   --secret id=gitlab_token,src=$gitlab_token \
   --tag localhost:5001/sandbox:local \
-  $repo_root
+  $context
 
 podman push --tls-verify=false localhost:5001/sandbox:local
 ##[<] 🤖🤖
