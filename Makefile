@@ -4,8 +4,9 @@ SHELL := zsh
 export PATH := $(CURDIR)/ci/zsh/scripts:$(PATH)
 
 WRAPPERS := repo-prepare-dev-env all all-scratch
-COMMANDS := render-templates repo-render-env repo-ci-prepare-hooks repo-ci-precommit-all bootstrap machine-up image-build-base image-build-installs image-build-config prune registry-up cluster-up cluster-down cilium-up netpol-up egress-denied session-create session-attach session-stop session-rm session-ls session-rename session-update-config test-e2e
+COMMANDS := repo-ci-prepare-hooks repo-ci-precommit-all bootstrap machine-up image-build-base image-build-installs image-build-config prune registry-up cluster-up cluster-down cilium-up netpol-up egress-denied session-create session-attach session-stop session-rm session-ls session-rename session-update-config test-e2e
 
+#[why] render-templates, repo-ci-render-templates and repo-render-env are declared .PHONY by the shared .mk, never here: a .PHONY name make cannot build reports "nothing to be done" and exits 0, turning a failed bootstrap into a silent success
 .PHONY: $(WRAPPERS) $(COMMANDS)
 
 .DEFAULT_GOAL := all
@@ -39,13 +40,14 @@ export E2E_TEARDOWN
 ##[<] Environment Variables
 
 ##[>] Docs [genai-include]
-#[what] render *.ontoRepo.tpl onto the repo (makefile.agents.md, repo-structure.md, CLAUDE.md, AGENTS.md, README.md)
-render-templates:
-	@che render-templates --profiles=ontoRepo
+#[what] shared render targets, authored in cross-repo/misc and rendered here by the bootstrap rule below
+-include shared/ci/make/render.mk
 
-#[what] render .env.tpl to .env: upstream refs and CI variables via glab, secrets via op
-repo-render-env:
-	@CHE_ENV_UNSET=empty che render-templates --profiles=envSeed
+#[why] gitignored shared/ tree: a fresh clone has no render.mk, so make renders it, then re-execs itself with the shared targets defined
+#[why] CI carries every ref as a job variable and has no glab auth: seed .env only when the environment names no MISC_REF
+shared/ci/make/render.mk:
+	@[[ -n $${MISC_REF:-} ]] || CHE_ENV_UNSET=empty $${CHE_BIN:-che} render-templates --profiles=envSeed
+	@$${CHE_BIN:-che} render-templates --profiles=bootstrapCrossRepoCI
 ##[<] Docs
 
 ##[>] Wrappers [genai-include]
