@@ -1,0 +1,22 @@
+##[>] 🤖
+dependsOn:
+  us-central1-docker.pkg.dev/staging-499418/ci/sandbox:
+    - uri: gitlab.com/konradodwrot/ai-harness/configs
+      type: gitRepository
+    - uri: gitlab.com/konradodwrot/configs
+      type: gitRepository
+    - uri: gitlab.com/konradodwrot/cross-repo/misc
+      type: gitRepository
+    - uri: gitlab.com/konradodwrot/cross-repo/prose/assets
+      type: gitRepository
+    - uri: gitlab.com/konradodwrot/cross-repo/prose/spec
+      type: gitRepository
+    - uri: gitlab.com/konradodwrot/go-modules/che
+      type: goModule
+  ciEnv:
+    - uri: us-central1-docker.pkg.dev/staging-499418/ci/ci-linux
+      type: ociImage
+  devEnv:
+    - uri: gitlab.com/konradodwrot/go-modules/che-schema
+      type: file
+##[<] 🤖

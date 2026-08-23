@@ -4,6 +4,8 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
+include:
+
 stages:
   - validate
 
@@ -30,17 +32,24 @@ default:
 
 variables:
   ARTIFACT_REGISTRY: $GRP_KO_VAR_ARTIFACT_REGISTRY
-  CI_IMAGES_REF: $GRP_KO_VAR_CI_IMAGES_REF
+  OCI_IMAGES_CI_LINUX_REF: $GRP_KO_VAR_OCI_IMAGES_CI_LINUX_REF
+  CHE_SCHEMA_REF: $GRP_KO_VAR_CHE_SCHEMA_REF
   PROSE_SPEC_REF: $GRP_KO_VAR_PROSE_SPEC_REF
   PROSE_ASSETS_REF: $GRP_KO_VAR_PROSE_ASSETS_REF
   MISC_REF: $GRP_KO_VAR_MISC_REF
   CONFIGS_REF: $GRP_KO_VAR_CONFIGS_REF
+  AI_CONFIGS_REF: $GRP_KO_VAR_AI_CONFIGS_REF
   AUTOMATION_REF: $GRP_KO_VAR_AUTOMATION_REF
-  CI_IMAGE: $ARTIFACT_REGISTRY/ci-linux:$CI_IMAGES_REF
+  CI_IMAGE: $ARTIFACT_REGISTRY/ci-linux:$OCI_IMAGES_CI_LINUX_REF
 
 #[why] CI validates, it does not build: both images are built on the host that runs the cluster,
 #   so a dry run catches a broken profile without producing an image nothing would pull
 validate-che-profiles:
+  rules:
+    - changes:
+        - che.yml
+        - ci/**/*
+        - .gitlab-ci.yml
   stage: validate
   needs: []
   image: $CI_IMAGE
@@ -59,8 +68,20 @@ validate-pre-commit-all:
   needs: []
   rules:
     - when: on_success
+      changes:
+        - .gitlab-ci.yml
+        - .env.tpl
+        - che.yml
+        - Makefile
+        - lefthook.yml
+        - .repo/*.tpl
+        - .repo/dependency-graph.yml
+        - .repo/artifacts-consumed.yml
+        - ci/**/*
+        - README.md
   image: $CI_IMAGE
   script:
     - make repo-ci-precommit-all
     - git diff --exit-code HEAD
+
 ##[<] 🤖🤖
