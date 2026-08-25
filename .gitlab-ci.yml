@@ -37,6 +37,9 @@ variables:
   MISC_REF: $GRP_KO_VAR_MISC_REF
   CONFIGS_REF: $GRP_KO_VAR_CONFIGS_REF
   AI_CONFIGS_REF: $GRP_KO_VAR_AI_CONFIGS_REF
+  #[why] nothing here reads it, configs' gitlab/base/macos profile does: this repo pulls configs,
+  #   whose spec resolves automation@${{ env.AUTOMATION_REF }} at parse time. Dropping it fails
+  #   che's remote-source parse before any profile renders
   AUTOMATION_REF: $GRP_KO_VAR_AUTOMATION_REF
   CI_IMAGE: $ARTIFACT_REGISTRY/ci-linux:$OCI_IMAGES_CI_LINUX_REF
 
