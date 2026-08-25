@@ -37,7 +37,6 @@ variables:
   MISC_REF: $GRP_KO_VAR_MISC_REF
   CONFIGS_REF: $GRP_KO_VAR_CONFIGS_REF
   AI_CONFIGS_REF: $GRP_KO_VAR_AI_CONFIGS_REF
-  AUTOMATION_REF: $GRP_KO_VAR_AUTOMATION_REF
   CI_IMAGE: $ARTIFACT_REGISTRY/ci-linux:$OCI_IMAGES_CI_LINUX_REF
 
 #[why] CI validates, it does not build: both images are built on the host that runs the cluster,
