@@ -51,14 +51,14 @@ print -r -- '{{ secret "gcp://konradodwrot-sandbox-auth/sandbox-gitlab-group-tok
 [[ -s $gitlab_token ]] \
   || fn-exit-with 1 "${0:t}: no GitLab token (gcp://konradodwrot-sandbox-auth/sandbox-gitlab-group-token); the sandbox SA could not read it, so the workspace clone would bake an empty workspace"
 
-typeset configs_ref="$(curl --connect-timeout 30 --retry 10 --retry-delay 30 --retry-all-errors -fsS 'https://gitlab.com/api/v4/projects/konradodwrot%2Fconfigs/repository/commits?path=profiles&per_page=1' | sed -n 's/.*"id":"\([0-9a-f]*\)".*/\1/p')"
+typeset tools_configs_ref="$(curl --connect-timeout 30 --retry 10 --retry-delay 30 --retry-all-errors -fsS 'https://gitlab.com/api/v4/projects/konradodwrot%2Ftools-configs/repository/commits?path=profiles&per_page=1' | sed -n 's/.*"id":"\([0-9a-f]*\)".*/\1/p')"
 
 typeset secrets_digest=$(cat $claude_creds $claude_onboarding $gcp_key $gitlab_token | shasum -a 256 | cut -d' ' -f1)
 
 podman build \
   --file $context/ci/docker/Dockerfile.config \
   --build-arg INSTALLS_IMAGE=localhost:5001/sandbox-installs:local \
-  --build-arg CONFIGS_REF=${configs_ref:-main} \
+  --build-arg TOOLS_CONFIGS_REF=${tools_configs_ref:-main} \
   --build-arg SECRETS_DIGEST=$secrets_digest \
   --secret id=claude_credentials,src=$claude_creds \
   --secret id=claude_onboarding,src=$claude_onboarding \

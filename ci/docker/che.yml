@@ -3,12 +3,12 @@
 sandbox-image:
   include:
     profiles:
-      - source: "git::https://gitlab.com/konradodwrot/configs@${{ env.CONFIGS_REF }}//che.yml::base/packages"
-      - source: "git::https://gitlab.com/konradodwrot/configs@${{ env.CONFIGS_REF }}//profiles/dev/che.yml::dev/virt/linux"
-      - source: "git::https://gitlab.com/konradodwrot/configs@${{ env.CONFIGS_REF }}//profiles/shell/che.yml::shell/virt/linux"
-      - source: "git::https://gitlab.com/konradodwrot/ai-harness/configs@${{ env.AI_CONFIGS_REF }}//che.yml::ai/virt/linux"
-      - source: "git::https://gitlab.com/konradodwrot/configs@${{ env.CONFIGS_REF }}//profiles/cloud/che.yml::cloud/virt/linux"
-      - source: "git::https://gitlab.com/konradodwrot/configs@${{ env.CONFIGS_REF }}//profiles/misc/che.yml::misc/virt/linux"
-      - source: "git::https://gitlab.com/konradodwrot/configs@${{ env.CONFIGS_REF }}//profiles/git/che.yml::git/virt/linux"
-      - source: "git::https://gitlab.com/konradodwrot/configs@${{ env.CONFIGS_REF }}//profiles/gitlab/che.yml::gitlab/virt/linux"
+      - source: "git::https://gitlab.com/konradodwrot/tools-configs@${{ env.TOOLS_CONFIGS_REF }}//che.yml::base/packages"
+      - source: "git::https://gitlab.com/konradodwrot/tools-configs@${{ env.TOOLS_CONFIGS_REF }}//profiles/dev/che.yml::dev/virt/linux"
+      - source: "git::https://gitlab.com/konradodwrot/tools-configs@${{ env.TOOLS_CONFIGS_REF }}//profiles/shell/che.yml::shell/virt/linux"
+      - source: "git::https://gitlab.com/konradodwrot/ai-harness/ai-tools-configs@${{ env.AI_TOOLS_CONFIGS_REF }}//che.yml::ai/virt/linux"
+      - source: "git::https://gitlab.com/konradodwrot/tools-configs@${{ env.TOOLS_CONFIGS_REF }}//profiles/cloud/che.yml::cloud/virt/linux"
+      - source: "git::https://gitlab.com/konradodwrot/tools-configs@${{ env.TOOLS_CONFIGS_REF }}//profiles/misc/che.yml::misc/virt/linux"
+      - source: "git::https://gitlab.com/konradodwrot/tools-configs@${{ env.TOOLS_CONFIGS_REF }}//profiles/git/che.yml::git/virt/linux"
+      - source: "git::https://gitlab.com/konradodwrot/tools-configs@${{ env.TOOLS_CONFIGS_REF }}//profiles/gitlab/che.yml::gitlab/virt/linux"
 ##[<] 🤖🤖
