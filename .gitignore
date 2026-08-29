@@ -1,5 +1,6 @@
 .env
 !.repo/
+!.che/
 ##[>] 🤖
 /AGENTS.md
 /CLAUDE.md

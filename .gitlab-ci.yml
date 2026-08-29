@@ -48,14 +48,14 @@ variables:
 validate-che-profiles:
   rules:
     - changes:
-        - che.yml
+        - .che/**/*
         - ci/**/*
         - .gitlab-ci.yml
   stage: validate
   needs: []
   image: $CI_IMAGE
   #[why] copied to /tmp, outside the checkout: -C changes directory but che then resolves the
-  #   enclosing repo, so any path inside this one loads the root che.yml (ontoRepo, claude-agents,
+  #   enclosing repo, so any path inside this one loads the root che.yml (ontoRepo,
   #   not sandbox-image). the image build hits this spec at ~/.sandbox-che, outside any repo, so
   #   validating a copy the same way matches how it is actually used
   script:
@@ -71,8 +71,7 @@ validate-pre-commit-all:
     - when: on_success
       changes:
         - .gitlab-ci.yml
-        - .env.tpl
-        - che.yml
+        - .che/**/*
         - Makefile
         - lefthook.yml
         - .repo/*.tpl
