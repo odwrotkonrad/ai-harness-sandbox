@@ -5,15 +5,13 @@ dependsOn:
       type: gitRepository
     - uri: gitlab.com/konradodwrot/tools-configs
       type: gitRepository
-    - uri: gitlab.com/konradodwrot/cross-repo/misc
-      type: gitRepository
-    - uri: gitlab.com/konradodwrot/cross-repo/prose/assets
-      type: gitRepository
     - uri: gitlab.com/konradodwrot/cross-repo/prose/spec
       type: gitRepository
     - uri: gitlab.com/konradodwrot/go-modules/che
       type: goModule
   ciEnv:
+    - uri: gitlab.com/konradodwrot/centralized/assets/generic
+      type: gitRepository
     - uri: us-central1-docker.pkg.dev/staging-499418/ci/ci-linux
       type: ociImage
   devEnv:

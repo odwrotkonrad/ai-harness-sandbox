@@ -1,9 +1,0 @@
-##[>] 🤖
-extends:
-  - ~/.config/lefthook/lefthook.yml
-
-pre-commit:
-  jobs:
-    - name: docsgen
-      run: make render-templates || true
-##[<] 🤖
