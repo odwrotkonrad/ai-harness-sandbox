@@ -5,8 +5,6 @@ dependsOn:
       type: gitRepository
     - uri: gitlab.com/konradodwrot/tools-configs
       type: gitRepository
-    - uri: gitlab.com/konradodwrot/cross-repo/prose/spec
-      type: gitRepository
     - uri: gitlab.com/konradodwrot/go-modules/che
       type: goModule
   ciEnv:

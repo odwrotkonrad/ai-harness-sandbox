@@ -31,6 +31,5 @@ variablesDefinitions:
     CHE_SCHEMA_REF: null
     GO_MODULES_CHE_REF: null
     OCI_IMAGES_CI_LINUX_REF: null
-    PROSE_SPEC_REF: null
     TOOLS_CONFIGS_REF: null
 ##[<] 🤖🤖
