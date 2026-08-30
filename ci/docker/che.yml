@@ -1,19 +1,34 @@
 # yaml-language-server: $schema=https://gitlab.com/api/v4/projects/konradodwrot%2Fgo-modules/packages/generic/che-schema/v0.0.1-che-min-v0.0.96/che.schema.json
 ##[>] 🤖🤖
-sandbox-image:
-  include:
-    profiles:
-      - source: "git::https://gitlab.com/konradodwrot/tools-configs@${{ env.TOOLS_CONFIGS_REF }}"
-        profiles:
-          - base/packages
-          - {spec: profiles/dev, profile: dev/virt/linux}
-          - {spec: profiles/shell, profile: shell/virt/linux}
-      - source: "git::https://gitlab.com/konradodwrot/ai-harness/ai-tools-configs@${{ env.AI_TOOLS_CONFIGS_REF }}"
-        profile: ai/virt/linux
-      - source: "git::https://gitlab.com/konradodwrot/tools-configs@${{ env.TOOLS_CONFIGS_REF }}"
-        profiles:
-          - {spec: profiles/cloud, profile: cloud/virt/linux}
-          - {spec: profiles/misc, profile: misc/virt/linux}
-          - {spec: profiles/git, profile: git/virt/linux}
-          - {spec: profiles/gitlab, profile: gitlab/virt/linux}
+profilesDefinitions:
+  sandbox-image:
+    type: host
+    include:
+      profiles:
+        - url: https://gitlab.com/konradodwrot/tools-configs
+          ref: "${{ env.TOOLS_CONFIGS_REF }}"
+          specDirPath: .
+          profileNames:
+            - base/packages
+            - specDirPath: profiles/dev
+              profileName: dev/virt/linux
+            - specDirPath: profiles/shell
+              profileName: shell/virt/linux
+        - url: https://gitlab.com/konradodwrot/ai-harness/ai-tools-configs
+          ref: "${{ env.AI_TOOLS_CONFIGS_REF }}"
+          specDirPath: .
+          profileName: ai/virt/linux
+        - url: https://gitlab.com/konradodwrot/tools-configs
+          ref: "${{ env.TOOLS_CONFIGS_REF }}"
+          specDirPath: .
+          profileNames:
+            - specDirPath: profiles/cloud
+              profileName: cloud/virt/linux
+            - specDirPath: profiles/misc
+              profileName: misc/virt/linux
+            - specDirPath: profiles/git
+              profileName: git/virt/linux
+            - specDirPath: profiles/gitlab
+              profileName: gitlab/virt/linux
+
 ##[<] 🤖🤖

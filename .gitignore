@@ -11,3 +11,4 @@
 /lefthook.yml
 /.env
 ##[<] 🤖
+/.che/cheVariables.local.yml
