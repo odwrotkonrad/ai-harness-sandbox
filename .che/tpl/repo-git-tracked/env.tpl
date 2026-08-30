@@ -1,5 +1,7 @@
 ##[>] 🤖🤖
-{{ localFile ".repo/upstream.env" | alwaysUpdate }}
+##[>] dependencies
+{{ localFile ".repo/upstream.env" | dependency }}
+##[<] dependencies
 SESSION=
 SESSION_NEW=
 SESSION_STOPPED=

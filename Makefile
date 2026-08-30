@@ -3,20 +3,14 @@ SHELL := zsh
 .SHELLFLAGS := -c
 export PATH := $(CURDIR)/ci/zsh/scripts:$(PATH)
 
-WRAPPERS := repo-prepare-dev-env all all-scratch
-COMMANDS := repo-ci-prepare-hooks repo-ci-precommit-all bootstrap machine-up image-build-base image-build-installs image-build-config prune registry-up cluster-up cluster-down cilium-up netpol-up egress-denied session-create session-attach session-stop session-rm session-ls session-rename session-update-config test-e2e
+WRAPPERS := all all-scratch
+COMMANDS := che-install generic-setup bootstrap machine-up image-build-base image-build-installs image-build-config prune registry-up cluster-up cluster-down cilium-up netpol-up egress-denied session-create session-attach session-stop session-rm session-ls session-rename session-update-config test-e2e
 
-#[why] render-templates, repo-ci-render-templates and repo-render-env are declared .PHONY by the shared .mk, never here: a .PHONY name make cannot build reports "nothing to be done" and exits 0, turning a failed bootstrap into a silent success
 .PHONY: $(WRAPPERS) $(COMMANDS)
 
 .DEFAULT_GOAL := all
 
-##[>] Dev Environment [genai-include]
-#[why] render precedes hooks: the docsgen pre-commit hook runs render-templates and fails on drift,
-#   so a fresh clone whose generated files were never rendered would fail its first commit
-#[what] make a fresh clone a working checkout: generated docs, git hooks
-repo-prepare-dev-env: repo-render-env render-templates repo-ci-prepare-hooks
-##[<] Dev Environment
+-include shared/generic/make/generic.mk
 
 ##[>] Environment Variables [genai-include]
 #[what] session name (statefulset + pvc); unset on session-create -> a random mnemonic, unset on session-attach/stop/rm -> picked
@@ -39,16 +33,17 @@ export E2E_SCRATCH
 export E2E_TEARDOWN
 ##[<] Environment Variables
 
-##[>] Docs [genai-include]
-#[what] shared render targets, authored in cross-repo/misc and rendered here by the bootstrap rule below
--include shared/ci/make/render.mk
+##[>] Setup [genai-include]
+#[what] install the latest released che into ~/.local/bin, only when the one on PATH is older
+che-install:
+	@curl -fsSL https://konradodwrot.gitlab.io/go-modules/che-install.sh | sh -s -- --skip-if-present-is-newer
 
-#[why] gitignored shared/ tree: a fresh clone has no render.mk, so make renders it, then re-execs itself with the shared targets defined
-#[why] CI carries every ref as a job variable and has no glab auth: seed .env only when the environment names no MISC_REF
-shared/ci/make/render.mk:
-	@[[ -n $${MISC_REF:-} ]] || CHE_ENV_UNSET=empty $${CHE_BIN:-che} render-templates --profiles=envSeed
-	@$${CHE_BIN:-che} render-templates --profiles=bootstrapCrossRepoCI
-##[<] Docs
+#[what] render the generic consumer payload (generic.mk, lefthook.yml, shared/generic/) at the pinned CENTRALIZED_ASSETS_GENERIC_REF
+generic-setup:
+	@$${CHE_BIN:-che} render-templates --profiles=genericSetup
+
+shared/generic/make/generic.mk: generic-setup
+##[<] Setup
 
 ##[>] Wrappers [genai-include]
 #[what] default flow (bare `make`): attach to a session, bringing up whatever it needs first (machine, registry, cluster, cilium, egress policy, any missing image layer) and creating a session when none exists
@@ -141,12 +136,5 @@ session-update-config:
 test-e2e:
 	@ci/zsh/tests/e2e.zsh
 
-#[what] install lefthook git hooks
-repo-ci-prepare-hooks:
-	@lefthook install --force
-
-#[what] run pre-commit hooks over all files (not just staged)
-repo-ci-precommit-all: repo-ci-prepare-hooks
-	@lefthook run pre-commit --all-files --force
 ##[<] CI
 ##[<] 🤖🤖

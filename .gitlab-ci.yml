@@ -1,4 +1,12 @@
 ##[>] 🤖🤖
+include:
+  - project: konradodwrot/centralized/assets/generic
+    ref: $GRP_KO_VAR_CENTRALIZED_ASSETS_GENERIC_REF
+    file:
+      - consumer-repo-config/files-generation/templates/FilesTrackedVerify.gitlab-ci.yml
+      - consumer-repo-config/precommit-lefthook/templates/PrecommitChanged.gitlab-ci.yml
+      - consumer-repo-config/precommit-lefthook/templates/PrecommitAll.gitlab-ci.yml
+
 workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -33,8 +41,11 @@ variables:
   OCI_IMAGES_CI_LINUX_REF: $GRP_KO_VAR_OCI_IMAGES_CI_LINUX_REF
   CHE_SCHEMA_REF: $GRP_KO_VAR_CHE_SCHEMA_REF
   PROSE_SPEC_REF: $GRP_KO_VAR_PROSE_SPEC_REF
-  PROSE_ASSETS_REF: $GRP_KO_VAR_PROSE_ASSETS_REF
+  CENTRALIZED_ASSETS_GENERIC_REF: $GRP_KO_VAR_CENTRALIZED_ASSETS_GENERIC_REF
+  #[why] tools-configs' released spec still names misc and prose/assets: che parses every remote
+  #   profile at init, so the pull below fails on a bare ref until tools-configs ships its move
   MISC_REF: $GRP_KO_VAR_MISC_REF
+  PROSE_ASSETS_REF: $GRP_KO_VAR_PROSE_ASSETS_REF
   TOOLS_CONFIGS_REF: $GRP_KO_VAR_TOOLS_CONFIGS_REF
   AI_TOOLS_CONFIGS_REF: $GRP_KO_VAR_AI_TOOLS_CONFIGS_REF
   #[why] nothing here reads it, configs' gitlab/base/macos profile does: this repo pulls configs,
@@ -63,26 +74,4 @@ validate-che-profiles:
     - cp ci/docker/che.yml /tmp/sandbox-che/che.yml
     - che run --profiles sandbox-image --dry-run all --validate-spec error
         -C /tmp/sandbox-che
-
-validate-pre-commit-all:
-  stage: validate
-  needs: []
-  rules:
-    - when: on_success
-      changes:
-        - .gitlab-ci.yml
-        - .che/**/*
-        - Makefile
-        - lefthook.yml
-        - .repo/*.tpl
-        - .repo/deps-graph.yml
-        - .repo/upstream.yml
-        - .repo/upstream.env
-        - ci/**/*
-        - README.md
-  image: $CI_IMAGE
-  script:
-    - make repo-ci-precommit-all
-    - git diff --exit-code HEAD
-
 ##[<] 🤖🤖
