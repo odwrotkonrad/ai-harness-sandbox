@@ -67,7 +67,7 @@ validate-che-profiles:
   #   validating a copy the same way matches how it is actually used
   script:
     - mkdir -p /tmp/sandbox-che
-    - cp ci/docker/che.yml /tmp/sandbox-che/che.yml
+    - cp ci/docker/che.yml ci/docker/cheVariables.yml /tmp/sandbox-che/
     - che run --profiles sandbox-image --dry-run all --validate-spec error
         -C /tmp/sandbox-che
 ##[<] 🤖🤖

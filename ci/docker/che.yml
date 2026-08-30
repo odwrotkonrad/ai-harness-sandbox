@@ -31,4 +31,9 @@ profilesDefinitions:
             - specDirPath: profiles/gitlab
               profileName: gitlab/virt/linux
 
+variablesDefinitions:
+  all: {scope: recursiveSpecsAndProfiles, required: true}
+  specVariablesDefinitions:
+    CENTRALIZED_ASSETS_PROSE_AI_REF: null
+    PROSE_SPEC_REF: null
 ##[<] 🤖🤖
