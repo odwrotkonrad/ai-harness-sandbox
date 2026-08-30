@@ -6,7 +6,7 @@ profilesDefinitions:
     include:
       profiles:
         - url: https://gitlab.com/konradodwrot/tools-configs
-          ref: "${{ env.TOOLS_CONFIGS_REF }}"
+          ref: "${{ var.TOOLS_CONFIGS_REF }}"
           specDirPath: .
           profileNames:
             - base/packages
@@ -15,11 +15,11 @@ profilesDefinitions:
             - specDirPath: profiles/shell
               profileName: shell/virt/linux
         - url: https://gitlab.com/konradodwrot/ai-harness/ai-tools-configs
-          ref: "${{ env.AI_TOOLS_CONFIGS_REF }}"
+          ref: "${{ var.AI_TOOLS_CONFIGS_REF }}"
           specDirPath: .
           profileName: ai/virt/linux
         - url: https://gitlab.com/konradodwrot/tools-configs
-          ref: "${{ env.TOOLS_CONFIGS_REF }}"
+          ref: "${{ var.TOOLS_CONFIGS_REF }}"
           specDirPath: .
           profileNames:
             - specDirPath: profiles/cloud
@@ -32,8 +32,12 @@ profilesDefinitions:
               profileName: gitlab/virt/linux
 
 variablesDefinitions:
-  all: {scope: recursiveSpecsAndProfiles, required: true}
+  all:
+    scope: recursiveSpecsAndProfiles
+    required: true
   specVariablesDefinitions:
+    AI_TOOLS_CONFIGS_REF: null
     CENTRALIZED_ASSETS_PROSE_AI_REF: null
     PROSE_SPEC_REF: null
+    TOOLS_CONFIGS_REF: null
 ##[<] 🤖🤖
