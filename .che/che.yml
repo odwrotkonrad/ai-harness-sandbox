@@ -21,14 +21,14 @@ profilesDefinitions:
 variablesDefinitions:
   all: {scope: recursiveSpecsAndProfiles, required: true}
   specVariablesDefinitions:
-    AI_TOOLS_CONFIGS_REF: {}
-    CENTRALIZED_ASSETS_GENERIC_REF: {}
-    CENTRALIZED_ASSETS_PROSE_AI_REF: {}
-    CENTRALIZED_ASSETS_PROSE_COMMON_REF: {}
-    CENTRALIZED_ASSETS_PROSE_HUMAN_REF: {}
-    CHE_SCHEMA_REF: {}
-    GO_MODULES_CHE_REF: {}
-    OCI_IMAGES_CI_LINUX_REF: {}
-    PROSE_SPEC_REF: {}
-    TOOLS_CONFIGS_REF: {}
+    AI_TOOLS_CONFIGS_REF: null
+    CENTRALIZED_ASSETS_GENERIC_REF: null
+    CENTRALIZED_ASSETS_PROSE_AI_REF: null
+    CENTRALIZED_ASSETS_PROSE_COMMON_REF: null
+    CENTRALIZED_ASSETS_PROSE_HUMAN_REF: null
+    CHE_SCHEMA_REF: null
+    GO_MODULES_CHE_REF: null
+    OCI_IMAGES_CI_LINUX_REF: null
+    PROSE_SPEC_REF: null
+    TOOLS_CONFIGS_REF: null
 ##[<] 🤖🤖
