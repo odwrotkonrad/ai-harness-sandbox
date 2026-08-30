@@ -38,6 +38,5 @@ variablesDefinitions:
   specVariablesDefinitions:
     AI_TOOLS_CONFIGS_REF: null
     CENTRALIZED_ASSETS_PROSE_AI_REF: null
-    PROSE_SPEC_REF: null
     TOOLS_CONFIGS_REF: null
 ##[<] 🤖🤖
