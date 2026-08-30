@@ -3,7 +3,9 @@ include:
   - project: konradodwrot/centralized/assets/generic
     ref: $GRP_KO_VAR_CENTRALIZED_ASSETS_GENERIC_REF
     file:
+      - consumer-repo-config/ci/templates/EmitEvents.gitlab-ci.yml
       - consumer-repo-config/files-generation/templates/FilesTrackedVerify.gitlab-ci.yml
+      - consumer-repo-config/ci/templates/UpstreamEnvDrift.gitlab-ci.yml
       - consumer-repo-config/precommit-lefthook/templates/PrecommitChanged.gitlab-ci.yml
       - consumer-repo-config/precommit-lefthook/templates/PrecommitAll.gitlab-ci.yml
 
@@ -14,6 +16,7 @@ workflow:
 
 stages:
   - validate
+  - notify
 
 #[why] all CI runs on the self-hosted GKE runners: no SaaS compute minutes remain. set once here so a
 #   new job inherits it instead of silently having no runner. jobs needing arm64 or another size
@@ -71,4 +74,8 @@ validate-che-profiles:
     - cp ci/docker/che.yml ci/docker/cheVariables.yml /tmp/sandbox-che/
     - che run --profiles sandbox-image --dry-run all --validate-spec error
         -C /tmp/sandbox-che
+
+emit-events:
+  extends: .emit-events
+  stage: notify
 ##[<] 🤖🤖
